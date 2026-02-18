@@ -15,25 +15,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+        run: uv python install 3.12
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: uv sync
 
       - name: Run pipeline
-        run: python -m ttsfeed.pipeline
+        run: uv run python -m ttsfeed.pipeline
 
-      - name: Commit and push diffs
+      - name: Commit and push results
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/diffs/
+          git add data/diffs/ data/snapshots/latest.parquet
           if git diff --cached --quiet; then
-            echo "No new diff files to commit"
+            echo "No new data to commit"
           else
-            git commit -m "data: add daily diff $(date -u +%Y-%m-%d)"
+            git commit -m "data: daily ingest $(date -u +%Y-%m-%d)"
             git push
           fi
