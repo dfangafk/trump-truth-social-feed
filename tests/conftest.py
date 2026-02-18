@@ -1,13 +1,9 @@
 """Shared fixtures for Truth Social feed tests."""
 
 import io
-from datetime import date
 
 import pandas as pd
 import pytest
-
-SAMPLE_DATE = date(2025, 1, 15)
-YESTERDAY_DATE = date(2025, 1, 14)
 
 
 @pytest.fixture
@@ -31,12 +27,6 @@ def sample_df():
         "favourites_count": [7, 8, 9],
         "media_attachments": [None, None, None],
     })
-
-
-@pytest.fixture
-def sample_df_yesterday(sample_df):
-    """Subset representing yesterday's snapshot (first row only)."""
-    return sample_df.iloc[:1].copy()
 
 
 @pytest.fixture

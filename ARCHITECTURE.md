@@ -1,6 +1,6 @@
 # Trump Truth Social Feed — Codebase Guide
 
-A daily ingestion pipeline that downloads Trump's Truth Social archive from CNN, stores snapshots as Parquet files, and produces JSON diffs of new posts.
+A daily pipeline that downloads Trump's Truth Social archive from CNN, filters posts created in the last 24 hours, and produces JSON output of new posts.
 
 ---
 
@@ -12,18 +12,17 @@ trump-truth-social-feed/
 ├── ttsfeed/                # Main package
 │   ├── __init__.py
 │   ├── config.py           # URLs, paths, constants
-│   ├── ingest.py           # Download archive → save snapshot
-│   ├── diff.py             # Compare snapshots → emit new-post diffs
-│   └── pipeline.py         # CLI entry point (ingest → diff)
+│   ├── fetch.py            # Download archive → parse to DataFrame
+│   ├── filter.py           # Filter recent posts → emit JSON output
+│   └── pipeline.py         # CLI entry point (fetch → filter)
 ├── tests/
 │   ├── conftest.py         # Shared fixtures (sample DataFrames, bytes)
 │   ├── test_config.py
-│   ├── test_ingest.py
-│   ├── test_diff.py
+│   ├── test_fetch.py
+│   ├── test_filter.py
 │   └── test_pipeline.py
 └── data/                   # Generated at runtime
-    ├── snapshots/          # Daily Parquet files + latest.parquet
-    └── diffs/              # Daily JSON diffs
+    └── output/             # Daily JSON output files
 ```
 
 ---
@@ -35,22 +34,22 @@ trump-truth-social-feed/
 │                     pipeline.py                          │
 │                   (CLI entry point)                      │
 │                                                          │
-│  main() parses CLI args, then runs:                      │
-│    1. ingest(date)                                       │
-│    2. run_diff(today, yesterday)                         │
+│  main() runs:                                            │
+│    1. raw, fmt = download_archive()                      │
+│    2. df = bytes_to_dataframe(raw, fmt)                  │
+│    3. new_posts_df = filter_recent_posts(df)             │
+│    4. save_output(new_posts_df, total_archive=len(df))   │
 └──────────┬──────────────────────────────┬────────────────┘
            │                              │
            ▼                              ▼
 ┌─────────────────────┐       ┌─────────────────────────┐
-│     ingest.py       │       │        diff.py          │
+│     fetch.py        │       │       filter.py         │
 │                     │       │                         │
-│ download_archive()  │       │ load_snapshot()         │
+│ download_archive()  │       │ filter_recent_posts()   │
 │   ↓                 │       │   ↓                     │
-│ bytes_to_dataframe()│       │ find_new_posts()        │
-│   ↓                 │       │   ↓                     │
-│ save_snapshot()     │       │ _post_to_dict()         │
-│   ↓                 │       │   ↓                     │
-│ cleanup_old_snaps() │       │ save_diff()             │
+│ bytes_to_dataframe()│       │ _post_to_dict()         │
+│                     │       │   ↓                     │
+│                     │       │ save_output()           │
 └────────┬────────────┘       └────────┬────────────────┘
          │                             │
          ▼                             ▼
@@ -58,9 +57,9 @@ trump-truth-social-feed/
 │                      config.py                           │
 │                                                          │
 │  ARCHIVE_URL_PARQUET / ARCHIVE_URL_JSON   (CNN sources)  │
-│  SNAPSHOTS_DIR / DIFFS_DIR                (output dirs)  │
-│  SNAPSHOT_RETENTION_DAYS = 7                             │
-│  snapshot_path(date) / diff_path(date)    (path helpers) │
+│  TRUTH_SOCIAL_PROFILE_URL                 (profile URL)  │
+│  OUTPUT_DIR                               (output dir)   │
+│  output_path(date)                        (path helper)  │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -76,21 +75,11 @@ download_archive()          ← tries Parquet first, falls back to JSON
 bytes_to_dataframe()        ← normalizes IDs to str, sorts by ID
       │
       ▼
-save_snapshot(df, date)     ← writes data/snapshots/YYYY-MM-DD.parquet
-      │                        + copies to latest.parquet (for CI)
-      ▼
-cleanup_old_snapshots()     ← removes files older than 7 days
+filter_recent_posts()       ← keeps posts where created_at >= now - 24h
       │
       ▼
-load_snapshot(today)   ─┐
-load_snapshot(yesterday)┤   ← falls back to latest.parquet if yesterday missing
-                        │
-                        ▼
-               find_new_posts()
-                        │
-                        ▼
-               save_diff()              ← writes data/diffs/YYYY-MM-DD.json
-                                           with new posts + summary stats
+save_output()               ← writes data/output/YYYY-MM-DD.json
+                               with new posts + summary stats
 ```
 
 ---
@@ -99,46 +88,37 @@ load_snapshot(yesterday)┤   ← falls back to latest.parquet if yesterday miss
 
 ### `config.py` — Constants & Path Helpers
 
-| Export                    | Description                                     |
-|---------------------------|-------------------------------------------------|
-| `ARCHIVE_URL_PARQUET`     | Primary CNN archive URL (Parquet format)         |
-| `ARCHIVE_URL_JSON`        | Fallback CNN archive URL (JSON format)           |
-| `BASE_DIR`                | Repository root                                  |
-| `SNAPSHOTS_DIR`           | `data/snapshots/`                                |
-| `DIFFS_DIR`               | `data/diffs/`                                    |
-| `SNAPSHOT_RETENTION_DAYS` | 7                                                |
-| `snapshot_path(date)`     | → `data/snapshots/YYYY-MM-DD.parquet`            |
-| `latest_snapshot_path()`  | → `data/snapshots/latest.parquet`                |
-| `diff_path(date)`         | → `data/diffs/YYYY-MM-DD.json`                   |
+| Export                    | Description                              |
+|---------------------------|------------------------------------------|
+| `ARCHIVE_URL_PARQUET`     | Primary CNN archive URL (Parquet format) |
+| `ARCHIVE_URL_JSON`        | Fallback CNN archive URL (JSON format)   |
+| `TRUTH_SOCIAL_PROFILE_URL`| Truth Social profile URL                 |
+| `BASE_DIR`                | Repository root                          |
+| `OUTPUT_DIR`              | `data/output/`                           |
+| `output_path(date)`       | → `data/output/YYYY-MM-DD.json`          |
 
-### `ingest.py` — Download & Store
+### `fetch.py` — Download & Parse
 
-| Function                  | Role                                             |
-|---------------------------|--------------------------------------------------|
-| `download_archive(url)`   | HTTP GET with User-Agent; auto-fallback to JSON  |
-| `bytes_to_dataframe()`    | Parse bytes → DataFrame; normalize `id` to str   |
-| `save_snapshot(df, date)` | Write dated `.parquet` + copy to `latest.parquet` |
-| `cleanup_old_snapshots()` | Delete snapshots older than 7 days               |
-| `ingest(date)`            | Orchestrator: download → parse → save → cleanup  |
+| Function                | Role                                           |
+|-------------------------|------------------------------------------------|
+| `download_archive(url)` | HTTP GET with User-Agent; auto-fallback to JSON |
+| `bytes_to_dataframe()`  | Parse bytes → DataFrame; normalize `id` to str |
 
-### `diff.py` — Detect New Posts
+### `filter.py` — Filter Recent Posts
 
-| Function                  | Role                                             |
-|---------------------------|--------------------------------------------------|
-| `load_snapshot(date)`     | Read `.parquet` → DataFrame (or `None`)          |
-| `find_new_posts()`        | Set-difference on `id` between today/yesterday   |
-| `_post_to_dict(row)`      | Row → dict with safe NaN/media handling          |
-| `save_diff()`             | Write JSON: `{date_from, date_to, summary, new_posts}` |
-| `run_diff(today, yday)`   | Orchestrator with graceful fallbacks             |
+| Function                | Role                                            |
+|-------------------------|-------------------------------------------------|
+| `filter_recent_posts()` | Filter DataFrame by `created_at` within window  |
+| `_post_to_dict(row)`    | Row → dict with safe NaN/media handling         |
+| `save_output()`         | Write JSON: `{as_of, window_hours, summary, new_posts}` |
 
 ### `pipeline.py` — CLI Entry Point
 
 ```bash
-ttsfeed              # run for today
-ttsfeed 2025-01-15   # backfill a specific date
+uv run python -m ttsfeed.pipeline   # run for today
 ```
 
-Parses an optional `YYYY-MM-DD` argument, runs `ingest()` then `run_diff()`, and exits with code 1 on errors.
+Calls `download_archive()` → `bytes_to_dataframe()` → `filter_recent_posts()` → `save_output()`, exits with code 1 on fetch errors.
 
 ---
 
@@ -157,17 +137,31 @@ Dev: `pytest`, `pytest-mock`
 ## Resilience / Edge Cases
 
 - **Format fallback**: Parquet download fails → retries with JSON URL.
-- **CI persistence**: `latest.parquet` survives across CI runs so diffs work even without yesterday's dated file.
 - **NaN handling**: Missing count columns default to `0` via safe int parsing.
 - **Media normalization**: Accepts both Python lists and JSON-encoded strings.
-- **First-run safety**: If no previous snapshot exists, diff is skipped gracefully (returns 0).
-- **Retention**: Old snapshots auto-pruned after 7 days; non-date filenames (like `latest.parquet`) are ignored.
+- **No posts in window**: If no posts are within the 24h window, an empty output is written.
+
+---
+
+## Output JSON Format
+
+```json
+{
+  "as_of": "2026-02-17T23:30:00Z",
+  "window_hours": 24,
+  "summary": {
+    "total_posts_in_archive": 31577,
+    "new_posts_count": 3
+  },
+  "new_posts": [...]
+}
+```
 
 ---
 
 ## Tests
 
-29 tests across 4 files. Run with:
+Tests across 4 files. Run with:
 
 ```bash
 pytest
@@ -175,20 +169,19 @@ pytest
 
 ### Coverage by Module
 
-| File              | Tests | What's Covered                                                    |
-|-------------------|-------|-------------------------------------------------------------------|
-| `test_config.py`  | 5     | Path formatting, zero-padded dates, directory separation          |
-| `test_ingest.py`  | 11    | Download (success + fallback + failure), parsing (Parquet + JSON), ID normalization, sorting, snapshot save, latest copy, dir creation, old-file cleanup |
-| `test_diff.py`    | 9     | New-post detection (partial/identical/all-new), `_post_to_dict` (basic fields, list media, JSON-string media, NaN counts, None media), diff JSON structure, zero-post diff, missing-snapshot handling, latest.parquet fallback, end-to-end integration |
-| `test_pipeline.py`| 4     | Default date, CLI date arg, invalid date (exit 1), ingest failure (exit 1) |
+| File              | What's Covered                                                    |
+|-------------------|-------------------------------------------------------------------|
+| `test_config.py`  | Path formatting, zero-padded dates                                |
+| `test_fetch.py`   | Download (success + fallback + failure), parsing (Parquet + JSON), ID normalization, sorting |
+| `test_filter.py`  | `filter_recent_posts` (recent/none/all/custom window), `_post_to_dict` (basic fields, list media, JSON-string media, NaN counts, None media), output JSON structure, zero-post output |
+| `test_pipeline.py`| Fetch+filter called correctly, fetch failure (exit 1)             |
 
 ### Shared Fixtures (`conftest.py`)
 
-| Fixture               | Description                                       |
-|------------------------|---------------------------------------------------|
-| `sample_df`            | 3-row DataFrame with realistic schema (IDs 100–300) |
-| `sample_df_yesterday`  | 1-row subset simulating previous day              |
-| `parquet_bytes`        | Binary Parquet of `sample_df`                     |
-| `json_bytes`           | Binary JSON of `sample_df`                        |
+| Fixture        | Description                                        |
+|----------------|----------------------------------------------------|
+| `sample_df`    | 3-row DataFrame with realistic schema (IDs 100–300) |
+| `parquet_bytes`| Binary Parquet of `sample_df`                      |
+| `json_bytes`   | Binary JSON of `sample_df`                         |
 
-All ingest tests mock HTTP calls; all diff tests use on-disk temp files via `tmp_path`.
+All fetch tests mock HTTP calls; filter tests use timestamps relative to a fixed reference time.
