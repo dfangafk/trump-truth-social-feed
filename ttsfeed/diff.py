@@ -6,7 +6,7 @@ from datetime import date
 
 import pandas as pd
 
-from ttsfeed.config import DIFFS_DIR, diff_path, snapshot_path
+from ttsfeed.config import DIFFS_DIR, diff_path, latest_snapshot_path, snapshot_path
 
 logger = logging.getLogger(__name__)
 
@@ -43,15 +43,21 @@ def _post_to_dict(row: pd.Series) -> dict:
             except (json.JSONDecodeError, TypeError):
                 media = []
 
+    def _safe_int(val, default=0):
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return default
+
     return {
         "id": str(row.get("id", "")),
         "created_at": str(row.get("created_at", "")),
         "content": str(row.get("content", "")),
         "url": row.get("url", f"https://truthsocial.com/@realDonaldTrump/{row.get('id', '')}"),
         "media": media,
-        "replies_count": int(row.get("replies_count", 0)),
-        "reblogs_count": int(row.get("reblogs_count", 0)),
-        "favourites_count": int(row.get("favourites_count", 0)),
+        "replies_count": _safe_int(row.get("replies_count", 0)),
+        "reblogs_count": _safe_int(row.get("reblogs_count", 0)),
+        "favourites_count": _safe_int(row.get("favourites_count", 0)),
     }
 
 
@@ -97,8 +103,16 @@ def run_diff(today_date: date, yesterday_date: date) -> int:
 
     yesterday_df = load_snapshot(yesterday_date)
     if yesterday_df is None:
-        logger.info("No previous snapshot found (first run?) — skipping diff")
-        return 0
+        # Fall back to latest.parquet (committed by CI from previous run)
+        latest = latest_snapshot_path()
+        if latest.exists():
+            logger.info("Yesterday's snapshot missing, using latest.parquet as baseline")
+            yesterday_df = pd.read_parquet(latest)
+            if "id" in yesterday_df.columns:
+                yesterday_df["id"] = yesterday_df["id"].astype(str)
+        else:
+            logger.info("No previous snapshot found (first run?) — skipping diff")
+            return 0
 
     new_posts_df = find_new_posts(today_df, yesterday_df)
 

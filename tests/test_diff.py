@@ -73,6 +73,18 @@ def test_post_to_dict_with_json_string_media():
     assert result["media"][0]["url"] == "https://img.example.com/photo.jpg"
 
 
+def test_post_to_dict_nan_counts():
+    row = pd.Series({
+        "id": "42", "created_at": "t", "content": "c", "url": "u",
+        "media_attachments": None,
+        "replies_count": float("nan"), "reblogs_count": None, "favourites_count": 0,
+    })
+    result = _post_to_dict(row)
+    assert result["replies_count"] == 0
+    assert result["reblogs_count"] == 0
+    assert result["favourites_count"] == 0
+
+
 def test_post_to_dict_none_media():
     row = pd.Series({
         "id": "42", "created_at": "t", "content": "c", "url": "u",
@@ -117,7 +129,17 @@ def test_run_diff_missing_today_returns_zero(tmp_path, monkeypatch):
     assert run_diff(TODAY, YESTERDAY) == 0
 
 
-def test_run_diff_missing_yesterday_returns_zero(tmp_path, monkeypatch, sample_df):
+def test_run_diff_missing_yesterday_falls_back_to_latest(tmp_path, monkeypatch, sample_df, sample_df_yesterday):
+    _patch_dirs(monkeypatch, tmp_path)
+    sample_df.to_parquet(tmp_path / "2025-01-15.parquet", index=False)
+    # No dated yesterday file, but latest.parquet exists
+    sample_df_yesterday.to_parquet(tmp_path / "latest.parquet", index=False)
+
+    count = run_diff(TODAY, YESTERDAY)
+    assert count == 2  # 3 today - 1 in latest
+
+
+def test_run_diff_missing_yesterday_no_latest_returns_zero(tmp_path, monkeypatch, sample_df):
     _patch_dirs(monkeypatch, tmp_path)
     sample_df.to_parquet(tmp_path / "2025-01-15.parquet", index=False)
     assert run_diff(TODAY, YESTERDAY) == 0
