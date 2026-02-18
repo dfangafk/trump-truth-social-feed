@@ -1,5 +1,6 @@
 # Snapshots (large Parquet files, ~5.7 MB each)
 data/snapshots/
+!data/snapshots/latest.parquet
 
 # Python
 __pycache__/

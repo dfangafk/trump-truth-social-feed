@@ -47,6 +47,7 @@ def test_download_archive_falls_back_to_json(mocker):
 
     raw, fmt = download_archive()
     assert raw == json_bytes
+    assert fmt == "json"
     assert mock_get.call_count == 2
 
 
