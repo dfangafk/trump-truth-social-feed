@@ -1,4 +1,4 @@
-"""Configuration constants for the Truth Social data ingestion pipeline."""
+"""Configuration constants for the Truth Social data pipeline."""
 
 from pathlib import Path
 from datetime import date
@@ -7,26 +7,15 @@ from datetime import date
 ARCHIVE_URL_PARQUET = "https://ix.cnn.io/data/truth-social/truth_archive.parquet"
 ARCHIVE_URL_JSON = "https://ix.cnn.io/data/truth-social/truth_archive.json"
 
+# Truth Social profile
+TRUTH_SOCIAL_PROFILE_URL = "https://truthsocial.com/@realDonaldTrump"
+
 # Directory paths
 BASE_DIR = Path(__file__).resolve().parent.parent  # repo root
 DATA_DIR = BASE_DIR / "data"
-SNAPSHOTS_DIR = DATA_DIR / "snapshots"
-DIFFS_DIR = DATA_DIR / "diffs"
-
-# Retention
-SNAPSHOT_RETENTION_DAYS = 7
+OUTPUT_DIR = DATA_DIR / "output"
 
 
-def snapshot_path(d: date) -> Path:
-    """Return path to the snapshot Parquet file for a given date."""
-    return SNAPSHOTS_DIR / f"{d.isoformat()}.parquet"
-
-
-def latest_snapshot_path() -> Path:
-    """Return path to the latest snapshot symlink/copy."""
-    return SNAPSHOTS_DIR / "latest.parquet"
-
-
-def diff_path(d: date) -> Path:
-    """Return path to the diff JSON file for a given date."""
-    return DIFFS_DIR / f"{d.isoformat()}.json"
+def output_path(d: date) -> Path:
+    """Return path to the output JSON file for a given date."""
+    return OUTPUT_DIR / f"{d.isoformat()}.json"
