@@ -6,7 +6,7 @@ from datetime import date
 
 import pandas as pd
 
-from config import DIFFS_DIR, diff_path, snapshot_path
+from ttsfeed.config import DIFFS_DIR, diff_path, snapshot_path
 
 logger = logging.getLogger(__name__)
 
