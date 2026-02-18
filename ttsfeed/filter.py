@@ -20,15 +20,15 @@ def _safe_int(val, default: int = 0) -> int:
 
 def filter_recent_posts(
     df: pd.DataFrame,
-    hours: int = 24,
     reference_time: pd.Timestamp | None = None,
+    hours: int = 24,
 ) -> pd.DataFrame:
     """Return posts where created_at is within the last `hours` hours.
 
     Args:
         df: Archive DataFrame with a ``created_at`` column.
-        hours: Size of the look-back window.
         reference_time: The "current" time to measure from. Defaults to now (UTC).
+        hours: Size of the look-back window.
     """
     if reference_time is None:
         reference_time = pd.Timestamp.now("UTC")
@@ -65,15 +65,16 @@ def _post_to_dict(row: pd.Series) -> dict:
 def save_output(
     new_posts_df: pd.DataFrame,
     total_archive: int,
-    hours: int = 24,
     reference_time: pd.Timestamp | None = None,
+    hours: int = 24,
 ) -> None:
     """Write the filtered posts to a JSON file."""
     if reference_time is None:
         reference_time = pd.Timestamp.now("UTC")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    new_posts = [_post_to_dict(row) for _, row in new_posts_df.iterrows()]
+    sorted_df = new_posts_df.sort_values("created_at", ascending=False)
+    new_posts = [_post_to_dict(row) for _, row in sorted_df.iterrows()]
 
     result = {
         "as_of": reference_time.isoformat(),
