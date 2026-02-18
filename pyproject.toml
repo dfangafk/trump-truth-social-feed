@@ -1,0 +1,11 @@
+[project]
+name = "trump-truth-social-feed"
+version = "0.1.0"
+description = "Truth Social feed ingestion pipeline"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pandas>=3.0.0",
+    "pyarrow>=23.0.1",
+    "requests>=2.32.5",
+]
