@@ -8,7 +8,7 @@ from datetime import date, timedelta
 import pandas as pd
 import requests
 
-from config import (
+from ttsfeed.config import (
     ARCHIVE_URL_JSON,
     ARCHIVE_URL_PARQUET,
     DIFFS_DIR,

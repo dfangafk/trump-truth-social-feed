@@ -8,7 +8,7 @@ ARCHIVE_URL_PARQUET = "https://ix.cnn.io/data/truth-social/truth_archive.parquet
 ARCHIVE_URL_JSON = "https://ix.cnn.io/data/truth-social/truth_archive.json"
 
 # Directory paths
-BASE_DIR = Path(__file__).parent
+BASE_DIR = Path(__file__).resolve().parent.parent  # repo root
 DATA_DIR = BASE_DIR / "data"
 SNAPSHOTS_DIR = DATA_DIR / "snapshots"
 DIFFS_DIR = DATA_DIR / "diffs"

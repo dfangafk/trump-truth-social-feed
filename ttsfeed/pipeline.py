@@ -4,8 +4,8 @@ import logging
 import sys
 from datetime import date, timedelta
 
-from diff import run_diff
-from ingest import ingest
+from ttsfeed.diff import run_diff
+from ttsfeed.ingest import ingest
 
 logging.basicConfig(
     level=logging.INFO,
