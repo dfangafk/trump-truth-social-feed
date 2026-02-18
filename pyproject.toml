@@ -10,5 +10,14 @@ dependencies = [
     "requests>=2.32.5",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.14",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [project.scripts]
 ttsfeed = "ttsfeed.pipeline:main"

@@ -1,0 +1,53 @@
+"""Shared fixtures for Truth Social feed tests."""
+
+import io
+from datetime import date
+
+import pandas as pd
+import pytest
+
+SAMPLE_DATE = date(2025, 1, 15)
+YESTERDAY_DATE = date(2025, 1, 14)
+
+
+@pytest.fixture
+def sample_df():
+    """Minimal DataFrame mimicking the real archive schema."""
+    return pd.DataFrame({
+        "id": ["100", "200", "300"],
+        "created_at": [
+            "2025-01-14T10:00:00Z",
+            "2025-01-15T10:00:00Z",
+            "2025-01-15T11:00:00Z",
+        ],
+        "content": ["Hello world", "Another post", "Third post"],
+        "url": [
+            "https://truthsocial.com/@realDonaldTrump/100",
+            "https://truthsocial.com/@realDonaldTrump/200",
+            "https://truthsocial.com/@realDonaldTrump/300",
+        ],
+        "replies_count": [1, 2, 3],
+        "reblogs_count": [4, 5, 6],
+        "favourites_count": [7, 8, 9],
+        "media_attachments": [None, None, None],
+    })
+
+
+@pytest.fixture
+def sample_df_yesterday(sample_df):
+    """Subset representing yesterday's snapshot (first row only)."""
+    return sample_df.iloc[:1].copy()
+
+
+@pytest.fixture
+def parquet_bytes(sample_df):
+    """Valid Parquet bytes for sample_df."""
+    buf = io.BytesIO()
+    sample_df.to_parquet(buf, index=False)
+    return buf.getvalue()
+
+
+@pytest.fixture
+def json_bytes(sample_df):
+    """Valid JSON bytes for sample_df."""
+    return sample_df.to_json(orient="records").encode()
