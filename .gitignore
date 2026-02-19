@@ -22,5 +22,6 @@ Thumbs.db
 *.swp
 *.swo
 
-# Claude
+# Agents
 CLAUDE.local.md
+AGENTS.md
