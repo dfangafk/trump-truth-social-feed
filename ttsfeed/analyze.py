@@ -3,7 +3,7 @@
 import json
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ttsfeed.config import POST_CATEGORIES
 
@@ -19,7 +19,7 @@ Select all applicable categories from this fixed list:
 {categories}
 
 Respond with valid JSON only, no markdown:
-{{"summary": "<2-3 sentence summary of key themes>", "categories": ["<matching categories>"]}}"""
+{{"summary": "<2-3 sentence summary of key themes>", "post_categories": {{"<post id>": ["<matching categories>"]}}}}"""
 
 
 @dataclass
@@ -27,28 +27,29 @@ class EnrichResult:
     """Result of LLM enrichment of a set of posts."""
 
     daily_summary: str
-    categories: list[str]
+    post_categories: dict[str, list[str]] = field(default_factory=dict)
 
 
 def analyze_posts(posts: list[dict], complete: Callable[[str], str]) -> EnrichResult:
-    """Send all posts to the LLM and return a summary and category list.
+    """Send all posts to the LLM and return a summary and per-post categories.
 
     Args:
         posts: List of post dicts (must contain a ``content`` key).
         complete: Callable that accepts a prompt string and returns the LLM response.
 
     Returns:
-        EnrichResult with ``daily_summary`` and ``categories``.
+        EnrichResult with ``daily_summary`` and ``post_categories``.
 
     Raises:
         ValueError: If the LLM response cannot be parsed as valid JSON with expected keys.
         Exception: Any exception raised by ``complete`` is propagated to the caller.
     """
     if not posts:
-        return EnrichResult(daily_summary="", categories=[])
+        return EnrichResult(daily_summary="", post_categories={})
 
     numbered_posts = "\n".join(
-        f"{i + 1}. {p.get('content', '')}" for i, p in enumerate(posts)
+        f"{i + 1}. [id={p.get('id', '')}] {p.get('content', '')}"
+        for i, p in enumerate(posts)
     )
     prompt = _PROMPT_TEMPLATE.format(
         n=len(posts),
@@ -63,12 +64,13 @@ def analyze_posts(posts: list[dict], complete: Callable[[str], str]) -> EnrichRe
     except json.JSONDecodeError as exc:
         raise ValueError(f"LLM returned non-JSON response: {raw!r}") from exc
 
-    if "summary" not in parsed or "categories" not in parsed:
+    if "summary" not in parsed or "post_categories" not in parsed:
         raise ValueError(
-            f"LLM response missing required keys 'summary'/'categories': {parsed!r}"
+            "LLM response missing required keys 'summary'/'post_categories': "
+            f"{parsed!r}"
         )
 
     return EnrichResult(
         daily_summary=str(parsed["summary"]),
-        categories=list(parsed["categories"]),
+        post_categories=dict(parsed["post_categories"]),
     )
