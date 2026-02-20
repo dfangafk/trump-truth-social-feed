@@ -27,7 +27,7 @@ def test_main_calls_fetch_and_filter(mocker):
     mock_download.assert_called_once()
     mock_parse.assert_called_once_with(b"raw", "parquet")
     mock_filter.assert_called_once_with(mock_df)
-    mock_save.assert_called_once_with(mock_df, total_archive=len(mock_df))
+    mock_save.assert_called_once_with(mock_df, total_archive=len(mock_df), enrichment=None)
 
 
 def test_main_exits_on_fetch_failure(mocker):

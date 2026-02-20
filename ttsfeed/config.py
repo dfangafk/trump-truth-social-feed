@@ -16,6 +16,19 @@ DATA_DIR = BASE_DIR / "data"
 OUTPUT_DIR = DATA_DIR / "output"
 
 
+POST_CATEGORIES: list[str] = [
+    "immigration",
+    "election integrity",
+    "media criticism",
+    "economy / trade",
+    "foreign policy",
+    "legal / courts",
+    "endorsements",
+    "personal attacks",
+    "MAGA / rallies",
+]
+
+
 def output_path(d: date) -> Path:
     """Return path to the output JSON file for a given date."""
     return OUTPUT_DIR / f"{d.isoformat()}.json"
