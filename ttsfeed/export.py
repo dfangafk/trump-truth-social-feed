@@ -2,11 +2,12 @@
 
 import json
 import logging
+from pathlib import Path
 
 import pandas as pd
 
 from ttsfeed.analyze import EnrichResult
-from ttsfeed.config import OUTPUT_DIR, TRUTH_SOCIAL_PROFILE_URL, output_path
+from ttsfeed.config import ENRICHED_OUTPUT_DIR, TRUTH_SOCIAL_PROFILE_URL, enriched_output_path
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +51,18 @@ def save_output(
     reference_time: pd.Timestamp | None = None,
     hours: int = 24,
     enrichment: EnrichResult | None = None,
+    output_dir: Path | None = None,
+    output_name: str | None = None,
 ) -> None:
-    """Write the filtered posts to a JSON file."""
+    """Write the filtered posts to a JSON file.
+
+    If ``output_name`` is provided, write to ``output_dir / output_name``.
+    Otherwise use the date-based filename.
+    """
     if reference_time is None:
         reference_time = pd.Timestamp.now("UTC")
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    target_dir = output_dir if output_dir is not None else ENRICHED_OUTPUT_DIR
+    target_dir.mkdir(parents=True, exist_ok=True)
 
     sorted_df = new_posts_df.sort_values("created_at", ascending=False)
     new_posts = [_post_to_dict(row) for _, row in sorted_df.iterrows()]
@@ -64,8 +72,9 @@ def save_output(
         "new_posts_count": len(new_posts),
     }
     if enrichment is not None:
+        for post in new_posts:
+            post["categories"] = enrichment.post_categories.get(post["id"], [])
         summary["daily_summary"] = enrichment.daily_summary
-        summary["categories"] = enrichment.categories
 
     result = {
         "as_of": reference_time.isoformat(),
@@ -74,7 +83,12 @@ def save_output(
         "new_posts": new_posts,
     }
 
-    path = output_path(reference_time.date())
+    if output_name:
+        path = target_dir / output_name
+    elif output_dir is None:
+        path = enriched_output_path(reference_time.date())
+    else:
+        path = target_dir / f"{reference_time.date().isoformat()}.json"
     with open(path, "w") as f:
         json.dump(result, f, indent=2, ensure_ascii=False, default=str)
 

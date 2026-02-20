@@ -5,8 +5,10 @@ import os
 import sys
 
 import litellm
+import pandas as pd
 
-from ttsfeed.analyze import EnrichResult, analyze_posts
+from ttsfeed.analyze import analyze_posts
+from ttsfeed.config import enriched_output_path, raw_output_path
 from ttsfeed.export import _post_to_dict, save_output
 from ttsfeed.fetch import bytes_to_dataframe, download_archive, filter_recent_posts
 
@@ -30,8 +32,18 @@ def main() -> None:
 
     new_posts_df = filter_recent_posts(df)
     logger.info("%d new posts found", len(new_posts_df))
+    reference_time = pd.Timestamp.now("UTC")
+    raw_path = raw_output_path(reference_time.date())
+    enriched_path = enriched_output_path(reference_time.date())
 
-    enrichment: EnrichResult | None = None
+    save_output(
+        new_posts_df,
+        total_archive=len(df),
+        reference_time=reference_time,
+        output_dir=raw_path.parent,
+        output_name=raw_path.name,
+    )
+
     llm_model = os.environ.get("LLM_MODEL")
     if llm_model:
         posts = [_post_to_dict(row) for _, row in new_posts_df.iterrows()]
@@ -46,12 +58,21 @@ def main() -> None:
         try:
             enrichment = analyze_posts(posts, complete)
             logger.info(
-                "Enrichment complete: %d categories", len(enrichment.categories)
+                "Enrichment complete: %d categorized posts",
+                len(enrichment.post_categories),
+            )
+            save_output(
+                new_posts_df,
+                total_archive=len(df),
+                reference_time=reference_time,
+                enrichment=enrichment,
+                output_dir=enriched_path.parent,
+                output_name=enriched_path.name,
             )
         except Exception:
             logger.warning("LLM enrichment failed; skipping", exc_info=True)
-
-    save_output(new_posts_df, total_archive=len(df), enrichment=enrichment)
+    else:
+        logger.info("LLM_MODEL not set; skipping enrichment")
 
     logger.info("Pipeline complete")
 
