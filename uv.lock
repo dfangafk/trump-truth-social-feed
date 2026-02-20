@@ -1629,6 +1629,7 @@ dependencies = [
     { name = "litellm" },
     { name = "pandas" },
     { name = "pyarrow" },
+    { name = "python-dotenv" },
     { name = "requests" },
 ]
 
@@ -1643,6 +1644,7 @@ requires-dist = [
     { name = "litellm", specifier = ">=1.0" },
     { name = "pandas", specifier = ">=3.0.0" },
     { name = "pyarrow", specifier = ">=23.0.1" },
+    { name = "python-dotenv", specifier = ">=1.0" },
     { name = "requests", specifier = ">=2.32.5" },
 ]
 
