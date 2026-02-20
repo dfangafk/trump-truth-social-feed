@@ -1,10 +1,11 @@
-"""Filter recent posts and write JSON output."""
+"""Serialize posts to JSON and write daily output files."""
 
 import json
 import logging
 
 import pandas as pd
 
+from ttsfeed.analyze import EnrichResult
 from ttsfeed.config import OUTPUT_DIR, TRUTH_SOCIAL_PROFILE_URL, output_path
 
 logger = logging.getLogger(__name__)
@@ -16,25 +17,6 @@ def _safe_int(val, default: int = 0) -> int:
         return int(val)
     except (ValueError, TypeError):
         return default
-
-
-def filter_recent_posts(
-    df: pd.DataFrame,
-    reference_time: pd.Timestamp | None = None,
-    hours: int = 24,
-) -> pd.DataFrame:
-    """Return posts where created_at is within the last `hours` hours.
-
-    Args:
-        df: Archive DataFrame with a ``created_at`` column.
-        reference_time: The "current" time to measure from. Defaults to now (UTC).
-        hours: Size of the look-back window.
-    """
-    if reference_time is None:
-        reference_time = pd.Timestamp.now("UTC")
-    created = pd.to_datetime(df["created_at"], utc=True)
-    cutoff = reference_time - pd.Timedelta(hours=hours)
-    return df[created >= cutoff].copy()
 
 
 def _post_to_dict(row: pd.Series) -> dict:
@@ -67,6 +49,7 @@ def save_output(
     total_archive: int,
     reference_time: pd.Timestamp | None = None,
     hours: int = 24,
+    enrichment: EnrichResult | None = None,
 ) -> None:
     """Write the filtered posts to a JSON file."""
     if reference_time is None:
@@ -76,13 +59,18 @@ def save_output(
     sorted_df = new_posts_df.sort_values("created_at", ascending=False)
     new_posts = [_post_to_dict(row) for _, row in sorted_df.iterrows()]
 
+    summary: dict = {
+        "total_posts_in_archive": total_archive,
+        "new_posts_count": len(new_posts),
+    }
+    if enrichment is not None:
+        summary["daily_summary"] = enrichment.daily_summary
+        summary["categories"] = enrichment.categories
+
     result = {
         "as_of": reference_time.isoformat(),
         "window_hours": hours,
-        "summary": {
-            "total_posts_in_archive": total_archive,
-            "new_posts_count": len(new_posts),
-        },
+        "summary": summary,
         "new_posts": new_posts,
     }
 
