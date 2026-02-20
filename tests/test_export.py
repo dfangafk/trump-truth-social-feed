@@ -6,6 +6,7 @@ import pandas as pd
 
 import ttsfeed.config as config_mod
 import ttsfeed.export as export_mod
+from ttsfeed.analyze import EnrichResult
 from ttsfeed.export import _post_to_dict, save_output
 
 # Fixed reference time for deterministic tests
@@ -13,9 +14,9 @@ REF_TIME = pd.Timestamp("2025-06-15T12:00:00Z")
 
 
 def _patch_dirs(monkeypatch, tmp_path):
-    """Redirect OUTPUT_DIR to tmp_path."""
-    monkeypatch.setattr(config_mod, "OUTPUT_DIR", tmp_path)
-    monkeypatch.setattr(export_mod, "OUTPUT_DIR", tmp_path)
+    """Redirect ENRICHED_OUTPUT_DIR to tmp_path."""
+    monkeypatch.setattr(config_mod, "ENRICHED_OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(export_mod, "ENRICHED_OUTPUT_DIR", tmp_path)
 
 
 # --- _post_to_dict ---
@@ -101,3 +102,59 @@ def test_save_output_zero_new_posts(tmp_path, monkeypatch, sample_df):
     data = json.loads((tmp_path / f"{today_str}.json").read_text())
     assert data["summary"]["new_posts_count"] == 0
     assert data["new_posts"] == []
+
+
+def test_save_output_with_enrichment_embeds_per_post_categories(
+    tmp_path, monkeypatch, sample_df
+):
+    _patch_dirs(monkeypatch, tmp_path)
+
+    new_posts = sample_df.iloc[1:]
+    enrichment = EnrichResult(
+        daily_summary="Summary text",
+        post_categories={"200": ["immigration"], "300": ["economy / trade"]},
+    )
+    save_output(
+        new_posts,
+        total_archive=3,
+        hours=24,
+        reference_time=REF_TIME,
+        enrichment=enrichment,
+    )
+
+    today_str = REF_TIME.date().isoformat()
+    data = json.loads((tmp_path / f"{today_str}.json").read_text())
+    assert data["summary"]["daily_summary"] == "Summary text"
+    assert "categories" not in data["summary"]
+    posts_by_id = {post["id"]: post for post in data["new_posts"]}
+    assert posts_by_id["200"]["categories"] == ["immigration"]
+    assert posts_by_id["300"]["categories"] == ["economy / trade"]
+
+
+def test_save_output_without_enrichment_posts_have_no_categories(
+    tmp_path, monkeypatch, sample_df
+):
+    _patch_dirs(monkeypatch, tmp_path)
+
+    new_posts = sample_df.iloc[1:]
+    save_output(new_posts, total_archive=3, hours=24, reference_time=REF_TIME)
+
+    today_str = REF_TIME.date().isoformat()
+    data = json.loads((tmp_path / f"{today_str}.json").read_text())
+    assert all("categories" not in post for post in data["new_posts"])
+
+
+def test_save_output_with_explicit_output_name(tmp_path, monkeypatch, sample_df):
+    _patch_dirs(monkeypatch, tmp_path)
+
+    new_posts = sample_df.iloc[1:]
+    save_output(
+        new_posts,
+        total_archive=3,
+        hours=24,
+        reference_time=REF_TIME,
+        output_dir=tmp_path,
+        output_name="raw.json",
+    )
+
+    assert (tmp_path / "raw.json").exists()

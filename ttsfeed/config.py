@@ -13,7 +13,8 @@ TRUTH_SOCIAL_PROFILE_URL = "https://truthsocial.com/@realDonaldTrump"
 # Directory paths
 BASE_DIR = Path(__file__).resolve().parent.parent  # repo root
 DATA_DIR = BASE_DIR / "data"
-OUTPUT_DIR = DATA_DIR / "output"
+RAW_OUTPUT_DIR = DATA_DIR / "raw"
+ENRICHED_OUTPUT_DIR = DATA_DIR / "enriched"
 
 
 POST_CATEGORIES: list[str] = [
@@ -29,6 +30,11 @@ POST_CATEGORIES: list[str] = [
 ]
 
 
-def output_path(d: date) -> Path:
-    """Return path to the output JSON file for a given date."""
-    return OUTPUT_DIR / f"{d.isoformat()}.json"
+def raw_output_path(d: date) -> Path:
+    """Return path to the raw output JSON file for a given date."""
+    return RAW_OUTPUT_DIR / f"{d.isoformat()}.json"
+
+
+def enriched_output_path(d: date) -> Path:
+    """Return path to the enriched output JSON file for a given date."""
+    return ENRICHED_OUTPUT_DIR / f"{d.isoformat()}.json"
