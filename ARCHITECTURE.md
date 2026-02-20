@@ -15,7 +15,7 @@ trump-truth-social-feed/
 │   ├── config.py           # URLs, paths, constants, POST_CATEGORIES
 │   ├── export.py           # Serialize posts to JSON, write daily output files
 │   ├── fetch.py            # Download archive → parse to DataFrame → filter recent posts
-│   ├── llm.py              # LLM provider abstraction — LiteLLM API + `claude -p` + `codex exec` fallbacks
+│   ├── llm.py              # LLM provider abstraction — explicit `LLM_PROVIDER` selection + auto fallback
 │   └── pipeline.py         # CLI entry point (fetch → filter → save → analyze → save)
 ├── tests/
 │   ├── conftest.py         # Shared fixtures (sample DataFrames, bytes)
@@ -98,7 +98,7 @@ save_output(output_dir=RAW_OUTPUT_DIR, output_name="YYYY-MM-DD.json")
                            ← phase 1: persist filtered posts immediately
       │
       ▼
-build_complete_fn()         ← returns _call_llm_api if `LLM_MODEL` set; else _call_claude_cli if `claude` CLI on PATH; else _call_codex_cli if `codex` on PATH; else None
+build_complete_fn()         ← honors `LLM_PROVIDER` (`api`/`claude`/`codex`/`auto`); in `auto`, resolves API (`LLM_MODEL`) → Claude CLI → Codex CLI → None
       │
       ▼
 analyze_posts()             ← [optional] LLM call via complete: Callable
@@ -154,12 +154,12 @@ The `complete` callable is injected by `pipeline.py` (obtained from `llm.build_c
 
 | Export                  | Role                                            |
 |-------------------------|-------------------------------------------------|
-| `build_complete_fn()`   | Resolution order: `_call_llm_api` if `LLM_MODEL` is set, else `_call_claude_cli` if `claude` is on PATH, else `_call_codex_cli` if `codex` is on PATH, else `None` |
+| `build_complete_fn()`   | Provider selection via `LLM_PROVIDER` (`api`, `claude`, `codex`, `auto`); `auto` resolution: `_call_llm_api` if `LLM_MODEL` set, else `_call_claude_cli` if `claude` on PATH, else `_call_codex_cli` if `codex` on PATH, else `None` |
 | `_call_llm_api(prompt)` | Calls `litellm.completion(...)` with `response_format={"type":"json_object"}` and returns `response.choices[0].message.content` |
 | `_call_claude_cli(prompt)` | Invokes `claude -p` headless CLI with `--output-format json` + `--json-schema`; returns `structured_output` as JSON string |
 | `_call_codex_cli(prompt)` | Invokes `codex exec` headless CLI with `--ephemeral`, `--full-auto`, and `--output-schema`; returns stdout JSON string |
 
-Primary path uses LiteLLM for provider-agnostic API calls (set `LLM_MODEL`, e.g. `anthropic/claude-opus-4-6` or `openai/gpt-4o`). LiteLLM reads provider credentials from environment variables such as `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. Fallback paths use Claude Code CLI (`claude -p`) and Codex CLI (`codex exec`) in headless mode via `subprocess.run`. In CI, if neither API nor CLI provider is configured, `build_complete_fn()` returns `None` and enrichment is silently skipped.
+`LLM_PROVIDER` controls which provider is used: `api`, `claude`, `codex`, or `auto` (default). In `api` mode, `LLM_MODEL` must be set (e.g. `anthropic/claude-opus-4-6` or `openai/gpt-4o`) and LiteLLM reads credentials from environment variables such as `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. Claude/Codex modes target their CLIs (`claude -p` and `codex exec`) in headless/non-interactive operation, intended for local testing. In `auto`, selection falls back API → Claude CLI → Codex CLI. If the requested provider is unavailable, `build_complete_fn()` returns `None` and enrichment is skipped.
 
 ### `pipeline.py` — CLI Entry Point
 
@@ -180,7 +180,7 @@ Calls `download_archive()` → `bytes_to_dataframe()` → `filter_recent_posts()
 | `pyarrow`  | Parquet read/write support |
 | `requests` | HTTP archive downloads     |
 
-LLM enrichment prefers LiteLLM API calls when `LLM_MODEL` is set; otherwise it can use the `claude` CLI (Claude Code) or `codex` CLI via `subprocess`.
+LLM enrichment can be forced with `LLM_PROVIDER` (`api`, `claude`, `codex`) or left as `auto` fallback. API mode uses LiteLLM; CLI modes use `claude` or `codex` via `subprocess` for local testing.
 
 Dev: `pytest`, `pytest-mock`
 
@@ -210,7 +210,7 @@ Without enrichment:
 }
 ```
 
-With enrichment (LLM provider configured via `LLM_MODEL`, `claude` CLI, or `codex` CLI on PATH):
+With enrichment (provider selected via `LLM_PROVIDER` or found by `auto` fallback):
 ```json
 {
   "as_of": "2026-02-17T23:30:00Z",
@@ -248,7 +248,7 @@ pytest
 | `test_config.py`   | Path formatting, zero-padded dates                                |
 | `test_export.py`   | `_post_to_dict` (basic fields, list media, JSON-string media, NaN counts, None media), `save_output` (JSON structure, zero-post output, per-post enrichment categories) |
 | `test_fetch.py`    | Download (success + fallback + failure), parsing (Parquet + JSON), ID normalization, sorting, `filter_recent_posts` (recent/none/all/custom window, defaults to now) |
-| `test_llm.py`      | `build_complete_fn`: API/Claude/Codex/None selection; `_call_llm_api`: success + propagated provider errors; `_call_claude_cli`: success path, non-zero exit code, missing structured_output key; `_call_codex_cli`: success + non-zero exit |
+| `test_llm.py`      | `build_complete_fn`: explicit `LLM_PROVIDER` selection (`api`/`claude`/`codex`/`auto`), invalid provider handling, availability checks, and None fallback; `_call_llm_api`: success + propagated provider errors; `_call_claude_cli`: success path, non-zero exit code, missing structured_output key; `_call_codex_cli`: success + non-zero exit |
 | `test_pipeline.py` | Two-phase save behavior (no LLM, LLM success, LLM failure) and fetch failure (exit 1) |
 
 ### Shared Fixtures (`conftest.py`)
