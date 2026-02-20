@@ -1,4 +1,4 @@
-"""Download the Truth Social archive and parse into a DataFrame."""
+"""Download, parse, and filter the Truth Social archive."""
 
 import io
 import logging
@@ -45,3 +45,22 @@ def bytes_to_dataframe(raw_bytes: bytes, fmt: str = "parquet") -> pd.DataFrame:
     df = df.sort_values("id").reset_index(drop=True)
     logger.info("Parsed %d posts", len(df))
     return df
+
+
+def filter_recent_posts(
+    df: pd.DataFrame,
+    reference_time: pd.Timestamp | None = None,
+    hours: int = 24,
+) -> pd.DataFrame:
+    """Return posts where created_at is within the last `hours` hours.
+
+    Args:
+        df: Archive DataFrame with a ``created_at`` column.
+        reference_time: The "current" time to measure from. Defaults to now (UTC).
+        hours: Size of the look-back window.
+    """
+    if reference_time is None:
+        reference_time = pd.Timestamp.now("UTC")
+    created = pd.to_datetime(df["created_at"], utc=True)
+    cutoff = reference_time - pd.Timedelta(hours=hours)
+    return df[created >= cutoff].copy()

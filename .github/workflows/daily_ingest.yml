@@ -26,6 +26,10 @@ jobs:
 
       - name: Run pipeline
         run: uv run python -m ttsfeed.pipeline
+        env:
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Commit and push results
         run: |
