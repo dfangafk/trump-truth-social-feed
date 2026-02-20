@@ -10,6 +10,8 @@ from collections.abc import Callable
 
 from litellm import completion
 
+from ttsfeed.config import LLM_MODEL, LLM_PROVIDER
+
 logger = logging.getLogger(__name__)
 
 _ENRICHMENT_SCHEMA: str = json.dumps(
@@ -43,7 +45,9 @@ def _call_llm_api(prompt: str) -> str:
     Returns:
         JSON string containing ``summary`` and ``post_categories`` keys.
     """
-    model = os.environ["LLM_MODEL"]
+    model = LLM_MODEL
+    if not model:
+        raise RuntimeError("LLM_MODEL is required for API provider")
     logger.info("Using LLM API model: %s", model)
     response = completion(
         model=model,
@@ -146,7 +150,7 @@ def build_complete_fn() -> Callable[[str], str] | None:
     """Return a completion callable backed by API or CLI provider.
 
     Set ``LLM_PROVIDER`` to explicitly choose a provider:
-    ``api``, ``claude``, ``codex``, or ``auto`` (default).
+    ``api``, ``claude_code_cli``, ``codex_cli``, or ``auto`` (default).
 
     Returns:
         ``_call_llm_api``/``_call_claude_cli``/``_call_codex_cli`` based on
@@ -156,24 +160,24 @@ def build_complete_fn() -> Callable[[str], str] | None:
         (local testing), else ``_call_codex_cli`` if ``codex`` is on PATH
         (local testing), else ``None``.
     """
-    provider = (os.getenv("LLM_PROVIDER", "auto") or "auto").strip().lower()
-    if provider not in {"api", "claude", "codex", "auto"}:
+    provider = (LLM_PROVIDER or "auto").strip().lower()
+    if provider not in {"api", "claude_code_cli", "codex_cli", "auto"}:
         logger.warning(
-            "Invalid %s value '%s'; expected one of: api, claude, codex, auto",
+            "Invalid %s value '%s'; expected one of: api, claude_code_cli, codex_cli, auto",
             "LLM_PROVIDER",
             provider,
         )
         return None
 
-    if provider in {"api", "auto"} and os.getenv("LLM_MODEL"):
+    if provider in {"api", "auto"} and LLM_MODEL:
         logger.info("Selected enrichment provider: API (LLM_MODEL)")
         return _call_llm_api
 
-    if provider in {"claude", "auto"} and shutil.which("claude") is not None:
+    if provider in {"claude_code_cli", "auto"} and shutil.which("claude") is not None:
         logger.info("Selected enrichment provider: Claude CLI")
         return _call_claude_cli
 
-    if provider in {"codex", "auto"} and shutil.which("codex") is not None:
+    if provider in {"codex_cli", "auto"} and shutil.which("codex") is not None:
         logger.info("Selected enrichment provider: Codex CLI")
         return _call_codex_cli
 

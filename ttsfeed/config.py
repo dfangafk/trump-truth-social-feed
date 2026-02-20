@@ -1,7 +1,12 @@
 """Configuration constants for the Truth Social data pipeline."""
 
-from pathlib import Path
 from datetime import date
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()  # Load .env from project root when present.
 
 # Archive URLs (CNN's publicly hosted Trump Truth Social archive)
 ARCHIVE_URL_PARQUET = "https://ix.cnn.io/data/truth-social/truth_archive.parquet"
@@ -15,6 +20,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent  # repo root
 DATA_DIR = BASE_DIR / "data"
 RAW_OUTPUT_DIR = DATA_DIR / "raw"
 ENRICHED_OUTPUT_DIR = DATA_DIR / "enriched"
+
+# LLM configuration — override via .env or environment variables.
+LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "auto")
+LLM_MODEL: str | None = os.getenv("LLM_MODEL")
 
 
 POST_CATEGORIES: list[str] = [
