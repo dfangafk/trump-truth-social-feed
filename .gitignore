@@ -26,5 +26,9 @@ Thumbs.db
 # Agents
 CLAUDE.local.md
 AGENTS.md
+
 # Data outputs (temporary)
 data/**/*.json
+
+# Local notes
+todo.md
