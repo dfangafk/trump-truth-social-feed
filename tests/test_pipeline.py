@@ -24,7 +24,7 @@ def test_main_no_llm_saves_once(mocker):
     mock_save = mocker.patch("ttsfeed.pipeline.save_output")
     mock_now = pd.Timestamp("2025-06-15T12:00:00Z")
     mocker.patch("ttsfeed.pipeline.pd.Timestamp.now", return_value=mock_now)
-    mocker.patch("ttsfeed.pipeline.os.environ.get", return_value=None)
+    mocker.patch("ttsfeed.pipeline.build_complete_fn", return_value=None)
 
     main()
 
@@ -47,7 +47,8 @@ def test_main_with_llm_saves_twice(mocker):
     mocker.patch("ttsfeed.pipeline.filter_recent_posts", return_value=mock_df)
     mock_now = pd.Timestamp("2025-06-15T12:00:00Z")
     mocker.patch("ttsfeed.pipeline.pd.Timestamp.now", return_value=mock_now)
-    mocker.patch("ttsfeed.pipeline.os.environ.get", return_value="gpt-4o-mini")
+    mock_complete = mocker.Mock(return_value='{"summary":"x","post_categories":{"1":["cat"]}}')
+    mocker.patch("ttsfeed.pipeline.build_complete_fn", return_value=mock_complete)
     enrichment = mocker.Mock(daily_summary="summary", post_categories={"1": ["cat"]})
     mock_analyze = mocker.patch("ttsfeed.pipeline.analyze_posts", return_value=enrichment)
     mock_save = mocker.patch("ttsfeed.pipeline.save_output")
@@ -55,6 +56,10 @@ def test_main_with_llm_saves_twice(mocker):
     main()
 
     mock_analyze.assert_called_once()
+    analyze_args = mock_analyze.call_args.args
+    assert analyze_args[1] is mock_complete
+    assert len(analyze_args[0]) == 1
+    assert analyze_args[0][0]["id"] == "1"
     assert mock_save.call_count == 2
     first_call = mock_save.call_args_list[0]
     second_call = mock_save.call_args_list[1]
@@ -82,7 +87,8 @@ def test_main_llm_failure_saves_once(mocker):
     mocker.patch("ttsfeed.pipeline.filter_recent_posts", return_value=mock_df)
     mock_now = pd.Timestamp("2025-06-15T12:00:00Z")
     mocker.patch("ttsfeed.pipeline.pd.Timestamp.now", return_value=mock_now)
-    mocker.patch("ttsfeed.pipeline.os.environ.get", return_value="gpt-4o-mini")
+    mock_complete = mocker.Mock(return_value='{"summary":"x","post_categories":{"1":["cat"]}}')
+    mocker.patch("ttsfeed.pipeline.build_complete_fn", return_value=mock_complete)
     mocker.patch(
         "ttsfeed.pipeline.analyze_posts",
         side_effect=RuntimeError("llm failed"),

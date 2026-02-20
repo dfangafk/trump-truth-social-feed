@@ -19,13 +19,16 @@ def _make_complete(response: str):
 VALID_RESPONSE = json.dumps(
     {
         "summary": "Trump posted about immigration and trade policy.",
-        "categories": ["immigration", "economy / trade"],
+        "post_categories": {
+            "1": ["immigration"],
+            "2": ["economy / trade"],
+        },
     }
 )
 
 SAMPLE_POSTS = [
-    {"content": "We must secure our border!"},
-    {"content": "Tariffs are great for America."},
+    {"id": "1", "content": "We must secure our border!"},
+    {"id": "2", "content": "Tariffs are great for America."},
 ]
 
 
@@ -34,14 +37,17 @@ def test_analyze_posts_success():
 
     assert isinstance(result, EnrichResult)
     assert result.daily_summary == "Trump posted about immigration and trade policy."
-    assert result.categories == ["immigration", "economy / trade"]
+    assert result.post_categories == {
+        "1": ["immigration"],
+        "2": ["economy / trade"],
+    }
 
 
 def test_analyze_posts_empty_list():
     result = analyze_posts([], _make_complete(VALID_RESPONSE))
 
     assert result.daily_summary == ""
-    assert result.categories == []
+    assert result.post_categories == {}
 
 
 def test_analyze_posts_malformed_json_raises():

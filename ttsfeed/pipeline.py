@@ -1,16 +1,15 @@
 """Orchestrator: fetch + filter + analyze (single entry point)."""
 
 import logging
-import os
 import sys
 
-import litellm
 import pandas as pd
 
 from ttsfeed.analyze import analyze_posts
 from ttsfeed.config import enriched_output_path, raw_output_path
 from ttsfeed.export import _post_to_dict, save_output
 from ttsfeed.fetch import bytes_to_dataframe, download_archive, filter_recent_posts
+from ttsfeed.llm import build_complete_fn
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,16 +43,9 @@ def main() -> None:
         output_name=raw_path.name,
     )
 
-    llm_model = os.environ.get("LLM_MODEL")
-    if llm_model:
+    complete = build_complete_fn()
+    if complete is not None:
         posts = [_post_to_dict(row) for _, row in new_posts_df.iterrows()]
-
-        def complete(prompt: str) -> str:
-            response = litellm.completion(
-                model=llm_model,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            return response.choices[0].message.content or ""
 
         try:
             enrichment = analyze_posts(posts, complete)
@@ -72,7 +64,7 @@ def main() -> None:
         except Exception:
             logger.warning("LLM enrichment failed; skipping", exc_info=True)
     else:
-        logger.info("LLM_MODEL not set; skipping enrichment")
+        logger.info("No LLM provider available; skipping enrichment")
 
     logger.info("Pipeline complete")
 
