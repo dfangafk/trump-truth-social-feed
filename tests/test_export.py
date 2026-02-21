@@ -1,13 +1,13 @@
-"""Tests for ttsfeed.export — post serialization and JSON output."""
+"""Tests for ttsenrich.export — post serialization and JSON output."""
 
 import json
 
 import pandas as pd
 
-import ttsfeed.config as config_mod
-import ttsfeed.export as export_mod
-from ttsfeed.analyze import EnrichResult
-from ttsfeed.export import _post_to_dict, save_output
+import ttsenrich.config as config_mod
+import ttsenrich.export as export_mod
+from ttsenrich.analyze import EnrichResult
+from ttsenrich.export import _post_to_dict, save_output
 
 # Fixed reference time for deterministic tests
 REF_TIME = pd.Timestamp("2025-06-15T12:00:00Z")

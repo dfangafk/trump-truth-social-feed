@@ -1,4 +1,4 @@
-"""Tests for ttsfeed.fetch — download, parse, and filter."""
+"""Tests for ttsenrich.fetch — download, parse, and filter."""
 
 import io
 from unittest.mock import MagicMock
@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 import requests as req_lib
 
-from ttsfeed.fetch import bytes_to_dataframe, download_archive, filter_recent_posts
+from ttsenrich.fetch import bytes_to_dataframe, download_archive, filter_recent_posts
 
 
 # --- download_archive ---
@@ -17,7 +17,7 @@ def test_download_archive_parquet_success(mocker, parquet_bytes):
     mock_resp = MagicMock()
     mock_resp.content = parquet_bytes
     mock_resp.raise_for_status.return_value = None
-    mocker.patch("ttsfeed.fetch.requests.get", return_value=mock_resp)
+    mocker.patch("ttsenrich.fetch.requests.get", return_value=mock_resp)
 
     raw, fmt = download_archive()
     assert fmt == "parquet"
@@ -30,7 +30,7 @@ def test_download_archive_falls_back_to_json(mocker):
     mock_resp_json.content = json_bytes
     mock_resp_json.raise_for_status.return_value = None
 
-    mock_get = mocker.patch("ttsfeed.fetch.requests.get")
+    mock_get = mocker.patch("ttsenrich.fetch.requests.get")
     mock_get.side_effect = [
         req_lib.RequestException("timeout"),
         mock_resp_json,
@@ -44,7 +44,7 @@ def test_download_archive_falls_back_to_json(mocker):
 
 def test_download_archive_both_fail_raises(mocker):
     mocker.patch(
-        "ttsfeed.fetch.requests.get",
+        "ttsenrich.fetch.requests.get",
         side_effect=req_lib.RequestException("fail"),
     )
     with pytest.raises(req_lib.RequestException):
