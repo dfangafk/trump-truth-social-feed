@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from ttsfeed.analyze import EnrichResult
-from ttsfeed.config import ENRICHED_OUTPUT_DIR, TRUTH_SOCIAL_PROFILE_URL, enriched_output_path
+from ttsenrich.analyze import EnrichResult
+from ttsenrich.config import ENRICHED_OUTPUT_DIR, TRUTH_SOCIAL_PROFILE_URL, enriched_output_path
 
 logger = logging.getLogger(__name__)
 

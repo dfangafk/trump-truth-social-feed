@@ -5,11 +5,11 @@ import sys
 
 import pandas as pd
 
-from ttsfeed.analyze import analyze_posts
-from ttsfeed.config import enriched_output_path, raw_output_path
-from ttsfeed.export import _post_to_dict, save_output
-from ttsfeed.fetch import bytes_to_dataframe, download_archive, filter_recent_posts
-from ttsfeed.llm import build_complete_fn
+from ttsenrich.analyze import analyze_posts
+from ttsenrich.config import enriched_output_path, raw_output_path
+from ttsenrich.export import _post_to_dict, save_output
+from ttsenrich.fetch import bytes_to_dataframe, download_archive, filter_recent_posts
+from ttsenrich.llm import build_complete_fn
 
 logging.basicConfig(
     level=logging.INFO,

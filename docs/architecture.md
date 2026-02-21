@@ -9,7 +9,7 @@ A daily pipeline that downloads Trump's Truth Social archive from CNN, filters p
 ```
 trump-truth-social-feed/
 ├── pyproject.toml          # Dependencies, entry point, build config
-├── ttsfeed/                # Main package
+├── ttsenrich/                # Main package
 │   ├── __init__.py
 │   ├── analyze.py          # LLM enrichment → EnrichResult (summary + per-post categories)
 │   ├── config.py           # URLs, paths, output dirs, dotenv-backed LLM config constants
@@ -168,7 +168,7 @@ The `complete` callable is injected by `pipeline.py` (obtained from `llm.build_c
 ### `pipeline.py` — CLI Entry Point
 
 ```bash
-uv run python -m ttsfeed.pipeline   # run for today (enrichment if API model, claude CLI, or codex CLI available)
+uv run python -m ttsenrich.pipeline   # run for today (enrichment if API model, claude CLI, or codex CLI available)
 ```
 
 Calls `download_archive()` → `bytes_to_dataframe()` → `filter_recent_posts()` → `save_output(..., output_dir=RAW_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (always) → `build_complete_fn()` → `analyze_posts()` (if `complete` is not `None`) → `save_output(..., enrichment=enrichment, output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (only if enrichment succeeds). Exits with code 1 on fetch errors. LLM failures are caught and logged as warnings, while the raw file remains intact.

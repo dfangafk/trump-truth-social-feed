@@ -10,7 +10,7 @@ from collections.abc import Callable
 
 from litellm import completion
 
-from ttsfeed.config import LLM_MODEL, LLM_PROVIDER
+from ttsenrich.config import LLM_MODEL, LLM_PROVIDER
 
 logger = logging.getLogger(__name__)
 
