@@ -6,11 +6,11 @@ import logging
 import pandas as pd
 import requests
 
-from ttsfeed.config import ARCHIVE_URL_JSON, ARCHIVE_URL_PARQUET
+from ttsenrich.config import ARCHIVE_URL_JSON, ARCHIVE_URL_PARQUET
 
 logger = logging.getLogger(__name__)
 
-HTTP_HEADERS = {"User-Agent": "ttsfeed/0.1 (Truth Social archive tracker)"}
+HTTP_HEADERS = {"User-Agent": "ttsenrich/0.1 (Truth Social archive tracker)"}
 
 
 def download_archive(url: str = ARCHIVE_URL_PARQUET) -> tuple[bytes, str]:

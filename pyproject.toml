@@ -22,4 +22,4 @@ dev = [
 testpaths = ["tests"]
 
 [project.scripts]
-ttsfeed = "ttsfeed.pipeline:main"
+ttsenrich = "ttsenrich.pipeline:main"

@@ -5,7 +5,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from ttsfeed.config import POST_CATEGORIES
+from ttsenrich.config import POST_CATEGORIES
 
 logger = logging.getLogger(__name__)
 

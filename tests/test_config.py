@@ -1,8 +1,8 @@
-"""Tests for ttsfeed.config — path generation functions."""
+"""Tests for ttsenrich.config — path generation functions."""
 
 from datetime import date
 
-from ttsfeed.config import (
+from ttsenrich.config import (
     ENRICHED_OUTPUT_DIR,
     RAW_OUTPUT_DIR,
     enriched_output_path,

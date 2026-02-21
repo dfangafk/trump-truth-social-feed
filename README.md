@@ -123,7 +123,7 @@ git clone https://github.com/dfangafk/trump-truth-social-feed.git
 cd trump-truth-social-feed
 uv sync
 cp .env.example .env   # add LLM credentials
-uv run python -m ttsfeed.pipeline
+uv run python -m ttsenrich.pipeline
 ```
 
 ---
@@ -134,7 +134,7 @@ The workflow (`.github/workflows/daily_ingest.yml`) runs daily at **23:30 UTC** 
 
 On each run it:
 1. Installs dependencies with `uv`
-2. Runs `ttsfeed.pipeline`
+2. Runs `ttsenrich.pipeline`
 3. Commits any new files in `data/raw/` and `data/enriched/` as `github-actions[bot]`
 
 LLM credentials are stored as GitHub Actions secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`) and repository variables (`LLM_PROVIDER`, `LLM_MODEL`).
@@ -145,7 +145,7 @@ LLM credentials are stored as GitHub Actions secrets (`ANTHROPIC_API_KEY`, `OPEN
 
 ```
 trump-truth-social-feed/
-├── ttsfeed/
+├── ttsenrich/
 │   ├── config.py      # Constants, paths, category taxonomy
 │   ├── fetch.py       # Download archive, parse to DataFrame
 │   ├── analyze.py     # LLM prompt construction and response parsing
