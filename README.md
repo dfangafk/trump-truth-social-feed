@@ -1,6 +1,6 @@
-# trump-truth-social-feed
+# trump-truth-social-enrich
 
-[![Daily Truth Social Feed](https://github.com/dfangafk/trump-truth-social-feed/actions/workflows/daily_ingest.yml/badge.svg)](https://github.com/dfangafk/trump-truth-social-feed/actions/workflows/daily_ingest.yml)
+[![Daily Truth Social Enrich](https://github.com/dfangafk/trump-truth-social-enrich/actions/workflows/daily_ingest.yml/badge.svg)](https://github.com/dfangafk/trump-truth-social-enrich/actions/workflows/daily_ingest.yml)
 
 Daily LLM-enriched feed of Trump's Truth Social posts — automatically categorized and summarized.
 
@@ -119,8 +119,8 @@ The upstream archive is hosted at [stiles/trump-truth-social-archive](https://gi
 **Prerequisites**: Python 3.12+, [`uv`](https://docs.astral.sh/uv/)
 
 ```bash
-git clone https://github.com/dfangafk/trump-truth-social-feed.git
-cd trump-truth-social-feed
+git clone https://github.com/dfangafk/trump-truth-social-enrich.git
+cd trump-truth-social-enrich
 uv sync
 cp .env.example .env   # add LLM credentials
 uv run python -m ttsenrich.pipeline
@@ -144,7 +144,7 @@ LLM credentials are stored as GitHub Actions secrets (`ANTHROPIC_API_KEY`, `OPEN
 ## Project Structure
 
 ```
-trump-truth-social-feed/
+trump-truth-social-enrich/
 ├── ttsenrich/
 │   ├── config.py      # Constants, paths, category taxonomy
 │   ├── fetch.py       # Download archive, parse to DataFrame

@@ -1,7 +1,7 @@
 [project]
-name = "trump-truth-social-feed"
+name = "trump-truth-social-enrich"
 version = "0.1.0"
-description = "Truth Social feed ingestion pipeline"
+description = "Daily LLM enrichment pipeline for Trump's Truth Social posts"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

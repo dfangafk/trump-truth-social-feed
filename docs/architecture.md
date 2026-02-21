@@ -1,13 +1,13 @@
-# Trump Truth Social Feed — Codebase Guide
+# Trump Truth Social Enrich — Codebase Guide
 
-A daily pipeline that downloads Trump's Truth Social archive from CNN, filters posts created in the last 24 hours, and produces JSON output of new posts.
+A daily pipeline that downloads Trump's Truth Social archive from CNN, filters posts created in the last 24 hours, and produces LLM-enriched JSON output of new posts.
 
 ---
 
 ## Project Structure
 
 ```
-trump-truth-social-feed/
+trump-truth-social-enrich/
 ├── pyproject.toml          # Dependencies, entry point, build config
 ├── ttsenrich/                # Main package
 │   ├── __init__.py
