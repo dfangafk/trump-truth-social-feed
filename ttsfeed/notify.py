@@ -3,15 +3,30 @@
 import logging
 import smtplib
 import ssl
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pandas as pd
+from jinja2 import Environment, FileSystemLoader
 
 from ttsfeed.analyze import EnrichResult
 from ttsfeed.config import GMAIL_APP_PASSWORD, RECEIVER_EMAIL, SENDER_GMAIL
 
 logger = logging.getLogger(__name__)
+
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+_ET = ZoneInfo("America/New_York")
+
+
+def _to_et_display(created_at: str) -> str:
+    """Convert UTC ISO timestamp to Eastern Time display string like 'Feb 21, 2026, 9:32 AM'."""
+    dt = datetime.fromisoformat(created_at).astimezone(_ET)
+    hour = dt.hour % 12 or 12
+    ampm = "AM" if dt.hour < 12 else "PM"
+    return f"{dt.strftime('%b')} {dt.day}, {dt.year}, {hour}:{dt.strftime('%M')} {ampm}"
 
 
 def send_notification(
@@ -32,13 +47,16 @@ def send_notification(
     post_count = len(new_posts)
 
     subject = f"Trump Truth Social \u2014 {date_str} ({post_count} new posts)"
-    body = _build_body(date_str, new_posts, enrichment)
+    ctx = _build_template_context(date_str, new_posts, enrichment)
+    text_body = _render_text(ctx)
+    html_body = _render_html(ctx)
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart("alternative")
     msg["From"] = SENDER_GMAIL
     msg["To"] = RECEIVER_EMAIL
     msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain"))
+    msg.attach(MIMEText(text_body, "plain"))
+    msg.attach(MIMEText(html_body, "html"))
 
     try:
         context = ssl.create_default_context()
@@ -50,51 +68,51 @@ def send_notification(
         logger.warning("Failed to send notification email", exc_info=True)
 
 
-def _build_body(
+def _build_template_context(
     date_str: str,
     new_posts: list[dict],
     enrichment: EnrichResult | None,
-) -> str:
-    """Build plain-text email body."""
-    lines: list[str] = [
-        f"Date: {date_str}",
-        f"New posts: {len(new_posts)}",
-        "",
-        "--- Summary ---",
-        enrichment.daily_summary if enrichment is not None else "Enrichment not available.",
-        "",
-        "--- Posts ---",
+) -> dict:
+    """Assemble the context dict passed to both Jinja2 templates."""
+    sorted_posts = sorted(new_posts, key=lambda p: p.get("created_at", ""), reverse=True)
+    enriched_posts = [
+        {
+            **post,
+            "categories": (
+                enrichment.post_categories.get(post.get("id", ""), [])
+                if enrichment is not None
+                else []
+            ),
+            "created_at_et": _to_et_display(post.get("created_at", "")),
+        }
+        for post in sorted_posts
     ]
 
-    sorted_posts = sorted(new_posts, key=lambda p: p.get("created_at", ""), reverse=True)
-    for i, post in enumerate(sorted_posts, 1):
-        created_at = _format_timestamp(post.get("created_at", ""))
-        content = post.get("content", "")
-        url = post.get("url", "")
-        categories = (
-            enrichment.post_categories.get(post.get("id", ""), [])
-            if enrichment is not None
-            else []
-        )
-
-        lines.append(f"[{i}] {created_at}")
-        lines.append(f"    {content}")
-        if categories:
-            lines.append(f"    Categories: {', '.join(categories)}")
-        lines.append(f"    URL: {url}")
-        lines.append("")
-
-    return "\n".join(lines)
+    return {
+        "date": date_str,
+        "subscriber_name": None,
+        "unsubscribe_url": "",
+        "data": {
+            "summary": {
+                "new_posts_count": len(new_posts),
+                "daily_summary": (
+                    enrichment.daily_summary
+                    if enrichment is not None
+                    else "Enrichment not available."
+                ),
+            },
+            "new_posts": enriched_posts,
+        },
+    }
 
 
-def _format_timestamp(ts: str) -> str:
-    """Parse and reformat a timestamp string to 'YYYY-MM-DD HH:MM UTC'."""
-    try:
-        t = pd.Timestamp(ts)
-        if t.tzinfo is None:
-            t = t.tz_localize("UTC")
-        else:
-            t = t.tz_convert("UTC")
-        return t.strftime("%Y-%m-%d %H:%M UTC")
-    except Exception:
-        return ts
+def _render_text(ctx: dict) -> str:
+    """Render the plain-text template with the given context."""
+    env = Environment(loader=FileSystemLoader(_TEMPLATES_DIR), autoescape=False)
+    return env.get_template("digest.txt.jinja2").render(**ctx)
+
+
+def _render_html(ctx: dict) -> str:
+    """Render the HTML template with the given context."""
+    env = Environment(loader=FileSystemLoader(_TEMPLATES_DIR), autoescape=True)
+    return env.get_template("digest.html.jinja2").render(**ctx)

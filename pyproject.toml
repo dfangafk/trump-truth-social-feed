@@ -5,6 +5,7 @@ description = "Daily LLM enrichment pipeline for Trump's Truth Social posts"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "jinja2>=3.0",
     "litellm>=1.0",
     "pandas>=3.0.0",
     "python-dotenv>=1.0",

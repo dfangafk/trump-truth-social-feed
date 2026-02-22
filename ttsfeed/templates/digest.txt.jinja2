@@ -1,0 +1,27 @@
+Trump Truth Social Digest — {{ date }}
+=====================================================
+
+Hi there,
+
+DAILY SUMMARY ({{ data.summary.new_posts_count }} post{{ "s" if data.summary.new_posts_count != 1 else "" }} today)
+-----------------------------------------------------
+{{ data.summary.daily_summary }}
+
+=====================================================
+POSTS
+=====================================================
+{% for post in data.new_posts %}
+[{{ loop.index }}] {{ post.created_at_et }}
+{% if post.content | length > 800 %}{{ post.content[:800] }}...{% else %}{{ post.content }}{% endif %}
+
+{% if post.categories %}Categories: {{ post.categories | join(", ") }}{% endif %}
+
+View on Truth Social: {{ post.url }}
+
+-----------------------------------------------------
+{% endfor %}
+
+To unsubscribe, visit:
+{{ unsubscribe_url }}
+
+Trump Truth Social Digest | 123 Main St, Anytown, USA 00000
