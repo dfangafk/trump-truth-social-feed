@@ -10,6 +10,7 @@ from ttsenrich.config import enriched_output_path, raw_output_path
 from ttsenrich.export import _post_to_dict, save_output
 from ttsenrich.fetch import bytes_to_dataframe, download_archive, filter_recent_posts
 from ttsenrich.llm import build_complete_fn
+from ttsenrich.notify import send_notification
 
 logging.basicConfig(
     level=logging.INFO,
@@ -43,12 +44,13 @@ def main() -> None:
         output_name=raw_path.name,
     )
 
+    new_posts = [_post_to_dict(row) for _, row in new_posts_df.iterrows()]
+    enrichment = None
+
     complete = build_complete_fn()
     if complete is not None:
-        posts = [_post_to_dict(row) for _, row in new_posts_df.iterrows()]
-
         try:
-            enrichment = analyze_posts(posts, complete)
+            enrichment = analyze_posts(new_posts, complete)
             logger.info(
                 "Enrichment complete: %d categorized posts",
                 len(enrichment.post_categories),
@@ -67,6 +69,7 @@ def main() -> None:
         logger.info("No LLM provider available; skipping enrichment")
 
     logger.info("Pipeline complete")
+    send_notification(reference_time, new_posts, enrichment)
 
 
 if __name__ == "__main__":

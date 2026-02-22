@@ -39,6 +39,12 @@ POST_CATEGORIES: list[str] = [
 ]
 
 
+# Email notification — override via .env or environment variables.
+GMAIL_USER = os.getenv("GMAIL_USER", "")        # sender address
+GMAIL_APP_PASS = os.getenv("GMAIL_APP_PASS", "")  # 16-char App Password
+NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "")    # recipient address
+
+
 def raw_output_path(d: date) -> Path:
     """Return path to the raw output JSON file for a given date."""
     return RAW_OUTPUT_DIR / f"{d.isoformat()}.json"
