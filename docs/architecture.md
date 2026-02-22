@@ -129,9 +129,9 @@ send_notification()         ← [optional] send Gmail digest; skipped if SMTP cr
 | `ENRICHED_OUTPUT_DIR`     | `data/enriched/`                         |
 | `LLM_PROVIDER`            | Dotenv/env-backed provider selector (`auto` default) |
 | `LLM_MODEL`               | Dotenv/env-backed API model string (or `None`) |
-| `GMAIL_USER`              | Dotenv/env-backed Gmail sender address (empty = notify disabled) |
-| `GMAIL_APP_PASS`          | Dotenv/env-backed Gmail App Password (16-char) |
-| `NOTIFY_EMAIL`            | Dotenv/env-backed recipient address |
+| `SENDER_GMAIL`            | Dotenv/env-backed Gmail sender address — must be `@gmail.com` (empty = notify disabled) |
+| `GMAIL_APP_PASSWORD`      | Dotenv/env-backed Gmail App Password (16-char) |
+| `RECEIVER_EMAIL`          | Dotenv/env-backed recipient address (any provider) |
 | `POST_CATEGORIES`         | Fixed taxonomy list for LLM categorization |
 | `raw_output_path(date)`   | → `data/raw/YYYY-MM-DD.json`             |
 | `enriched_output_path(date)` | → `data/enriched/YYYY-MM-DD.json`    |
@@ -177,7 +177,7 @@ The `complete` callable is injected by `pipeline.py` (obtained from `llm.build_c
 
 | Export                    | Role                                                              |
 |---------------------------|-------------------------------------------------------------------|
-| `send_notification(reference_time, new_posts, enrichment)` | Build and send daily digest email via Gmail SMTP SSL (port 465). Skips silently if `GMAIL_USER`, `GMAIL_APP_PASS`, or `NOTIFY_EMAIL` are unset. Catches all send errors and logs as warnings so the pipeline never fails due to email issues. |
+| `send_notification(reference_time, new_posts, enrichment)` | Build and send daily digest email via Gmail SMTP SSL (port 465). Skips silently if `SENDER_GMAIL`, `GMAIL_APP_PASSWORD`, or `RECEIVER_EMAIL` are unset. Catches all send errors and logs as warnings so the pipeline never fails due to email issues. |
 
 Subject: `Trump Truth Social — YYYY-MM-DD (N new posts)`. Body includes date, post count, daily summary (or "Enrichment not available." if enrichment is `None`), and per-post content, categories, and URL.
 

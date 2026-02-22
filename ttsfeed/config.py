@@ -1,10 +1,13 @@
 """Configuration constants for the Truth Social data pipeline."""
 
 from datetime import date
+import logging
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()  # Load .env from project root when present.
 
@@ -40,9 +43,15 @@ POST_CATEGORIES: list[str] = [
 
 
 # Email notification — override via .env or environment variables.
-GMAIL_USER = os.getenv("GMAIL_USER", "")        # sender address
-GMAIL_APP_PASS = os.getenv("GMAIL_APP_PASS", "")  # 16-char App Password
-NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "")    # recipient address
+SENDER_GMAIL = os.getenv("SENDER_GMAIL", "")          # sender address (must be @gmail.com)
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")  # 16-char App Password
+RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL", "")      # recipient address
+
+if SENDER_GMAIL and not SENDER_GMAIL.endswith("@gmail.com"):
+    logger.warning(
+        "SENDER_GMAIL=%r does not end with @gmail.com; SMTP login will likely fail",
+        SENDER_GMAIL,
+    )
 
 
 def raw_output_path(d: date) -> Path:
