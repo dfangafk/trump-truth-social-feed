@@ -73,7 +73,10 @@ def save_output(
     }
     if enrichment is not None:
         for post in new_posts:
-            post["categories"] = enrichment.post_categories.get(post["id"], [])
+            post_id = post["id"]
+            post["categories"] = enrichment.post_categories.get(post_id, [])
+            if post_id in enrichment.post_is_reblog:
+                post["is_reblog"] = enrichment.post_is_reblog[post_id]
         summary["daily_summary"] = enrichment.daily_summary
 
     result = {
