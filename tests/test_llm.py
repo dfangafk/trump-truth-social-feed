@@ -6,8 +6,8 @@ import subprocess
 
 import pytest
 
+from ttsfeed.analyze import ENRICHMENT_SCHEMA
 from ttsfeed.llm import (
-    _ENRICHMENT_SCHEMA,
     _call_claude_cli,
     _call_codex_cli,
     _call_llm_api,
@@ -106,7 +106,7 @@ def test_build_complete_fn_returns_none_on_invalid_provider(mocker):
 
 
 def test_call_claude_cli_success(mocker):
-    structured = {"summary": "Some summary", "post_categories": {"1": ["immigration"]}}
+    structured = {"summary": "Some summary", "posts": [{"id": "1", "categories": ["immigration"]}]}
     envelope = json.dumps({"structured_output": structured})
     mock_run = mocker.patch(
         "ttsfeed.llm.subprocess.run",
@@ -157,14 +157,14 @@ def test_call_codex_cli_success(mocker):
         return_value=subprocess.CompletedProcess(
             args=[],
             returncode=0,
-            stdout='{"summary": "S", "post_categories": {}}',
+            stdout='{"summary": "S", "posts": []}',
             stderr="",
         ),
     )
 
     result = _call_codex_cli("test prompt")
 
-    assert result == '{"summary": "S", "post_categories": {}}'
+    assert result == '{"summary": "S", "posts": []}'
     mock_run.assert_called_once()
     call_args = mock_run.call_args[0][0]
     assert call_args[0] == "codex"
@@ -175,7 +175,7 @@ def test_call_codex_cli_success(mocker):
     assert "test prompt" in call_args
     schema_path = call_args[call_args.index("--output-schema") + 1]
     assert json.loads(Path(schema_path).read_text(encoding="utf-8")) == json.loads(
-        _ENRICHMENT_SCHEMA
+        ENRICHMENT_SCHEMA
     )
     mock_unlink.assert_called_once_with(schema_path)
     Path(schema_path).unlink(missing_ok=True)
@@ -200,7 +200,7 @@ def test_call_llm_api_success(mocker):
         choices=[
             mocker.Mock(
                 message=mocker.Mock(
-                    content='{"summary":"Some summary","post_categories":{"1":["economy"]}}'
+                    content='{"summary":"Some summary","posts":[{"id":"1","categories":["economy"]}]}'
                 )
             )
         ]
@@ -208,7 +208,7 @@ def test_call_llm_api_success(mocker):
 
     result = _call_llm_api("test prompt")
 
-    assert result == '{"summary":"Some summary","post_categories":{"1":["economy"]}}'
+    assert result == '{"summary":"Some summary","posts":[{"id":"1","categories":["economy"]}]}'
     mock_completion.assert_called_once_with(
         model="openai/gpt-4o",
         messages=[{"role": "user", "content": "test prompt"}],
@@ -234,7 +234,7 @@ def test_call_llm_api_raises_when_models_empty(mocker):
 
 def test_call_llm_api_falls_back_when_primary_fails(mocker):
     mocker.patch("ttsfeed.llm.LLM_MODELS", ["openai/gpt-4o", "gemini/gemini-2.5-flash"])
-    fallback_content = '{"summary":"fallback summary","post_categories":{}}'
+    fallback_content = '{"summary":"fallback summary","posts":[]}'
     mock_completion = mocker.patch(
         "ttsfeed.llm.completion",
         side_effect=[
