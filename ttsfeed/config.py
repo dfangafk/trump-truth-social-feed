@@ -1,6 +1,7 @@
 """Configuration constants for the Truth Social data pipeline."""
 
 from datetime import date
+import json
 import logging
 import os
 from pathlib import Path
@@ -26,7 +27,8 @@ ENRICHED_OUTPUT_DIR = DATA_DIR / "enriched"
 
 # LLM configuration — override via .env or environment variables.
 LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "auto")
-LLM_MODEL: str | None = os.getenv("LLM_MODEL")
+# JSON array of models to try in order (e.g. '["openai/gpt-4o","gemini/gemini-2.5-flash"]').
+LLM_MODELS: list[str] = json.loads(os.getenv("LLM_MODELS", "[]"))
 
 
 POST_TAGS: dict[str, str] = {

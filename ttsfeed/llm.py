@@ -10,7 +10,7 @@ from collections.abc import Callable
 
 from litellm import completion
 
-from ttsfeed.config import LLM_MODEL, LLM_PROVIDER
+from ttsfeed.config import LLM_MODELS, LLM_PROVIDER
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +33,11 @@ _ENRICHMENT_SCHEMA: str = json.dumps(
 
 
 def _call_llm_api(prompt: str) -> str:
-    """Invoke an LLM provider API through LiteLLM and return JSON output string.
+    """Invoke an LLM provider API through LiteLLM, trying each model in LLM_MODELS in order.
 
-    The model is resolved from ``LLM_MODEL`` environment variable and provider
-    credentials are handled by LiteLLM using provider-specific environment keys
-    (for example: ``ANTHROPIC_API_KEY`` or ``OPENAI_API_KEY``).
+    Each model is tried with num_retries=3 (exponential backoff handled by
+    LiteLLM). Moves to the next model if all retries fail. Raises the last
+    exception if all models fail.
 
     Args:
         prompt: The prompt to send to the configured model.
@@ -45,16 +45,25 @@ def _call_llm_api(prompt: str) -> str:
     Returns:
         JSON string containing ``summary`` and ``post_categories`` keys.
     """
-    model = LLM_MODEL
-    if not model:
-        raise RuntimeError("LLM_MODEL is required for API provider")
-    logger.info("Using LLM API model: %s", model)
-    response = completion(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        response_format={"type": "json_object"},
-    )
-    return response.choices[0].message.content
+    if not LLM_MODELS:
+        raise RuntimeError("LLM_MODELS is required for API provider")
+
+    last_exc: Exception | None = None
+    for m in LLM_MODELS:
+        try:
+            logger.info("Trying LLM model: %s", m)
+            response = completion(
+                model=m,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+                num_retries=3,
+            )
+            return response.choices[0].message.content
+        except Exception as exc:
+            logger.warning("Model %s failed after retries: %s", m, exc)
+            last_exc = exc
+
+    raise last_exc  # type: ignore[misc]
 
 
 def _call_claude_cli(prompt: str) -> str:
@@ -155,7 +164,7 @@ def build_complete_fn() -> Callable[[str], str] | None:
     Returns:
         ``_call_llm_api``/``_call_claude_cli``/``_call_codex_cli`` based on
         ``LLM_PROVIDER`` when explicitly set and available; otherwise, in
-        ``auto`` mode, ``_call_llm_api`` if ``LLM_MODEL`` is set (primary
+        ``auto`` mode, ``_call_llm_api`` if ``LLM_MODELS`` is set (primary
         runtime path), else ``_call_claude_cli`` if ``claude`` is on PATH
         (local testing), else ``_call_codex_cli`` if ``codex`` is on PATH
         (local testing), else ``None``.
@@ -169,8 +178,8 @@ def build_complete_fn() -> Callable[[str], str] | None:
         )
         return None
 
-    if provider in {"api", "auto"} and LLM_MODEL:
-        logger.info("Selected enrichment provider: API (LLM_MODEL)")
+    if provider in {"api", "auto"} and LLM_MODELS:
+        logger.info("Selected enrichment provider: API (LLM_MODELS)")
         return _call_llm_api
 
     if provider in {"claude_code_cli", "auto"} and shutil.which("claude") is not None:
