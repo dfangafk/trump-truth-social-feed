@@ -66,7 +66,8 @@ def _build_body(
         "--- Posts ---",
     ]
 
-    for i, post in enumerate(new_posts, 1):
+    sorted_posts = sorted(new_posts, key=lambda p: p.get("created_at", ""), reverse=True)
+    for i, post in enumerate(sorted_posts, 1):
         created_at = _format_timestamp(post.get("created_at", ""))
         content = post.get("content", "")
         url = post.get("url", "")
