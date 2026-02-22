@@ -38,7 +38,7 @@ You are analyzing Trump's Truth Social posts for a daily briefing.
 Substantive posts ({n} total):
 {numbered_posts}
 
-Assign each post up to {max_tags} categories from this list:
+Assign each post up to {max_tags} categories from this list. Always assign at least one category; use "Other" if no specific category fits:
 {category_lines}
 
 Respond with valid JSON only, no markdown:
@@ -123,6 +123,7 @@ def analyze_posts(posts: list[dict], complete: Callable[[str], str]) -> EnrichRe
     )
 
     raw = complete(prompt)
+    logger.debug("LLM raw response: %s", raw)
 
     try:
         parsed = json.loads(raw)
