@@ -38,7 +38,7 @@ def test_post_to_dict_with_list_media():
         "replies_count": 0, "reblogs_count": 0, "favourites_count": 0,
     })
     result = _post_to_dict(row)
-    assert result["media"] == [{"url": "https://img.example.com/photo.jpg"}]
+    assert result["media"] == ["https://img.example.com/photo.jpg"]
 
 
 def test_post_to_dict_with_json_string_media():
@@ -49,8 +49,19 @@ def test_post_to_dict_with_json_string_media():
         "replies_count": 0, "reblogs_count": 0, "favourites_count": 0,
     })
     result = _post_to_dict(row)
-    assert isinstance(result["media"], list)
-    assert result["media"][0]["url"] == "https://img.example.com/photo.jpg"
+    assert result["media"] == ["https://img.example.com/photo.jpg"]
+
+
+def test_post_to_dict_with_flat_url_media():
+    """media column (flat list of URL strings) is used when media_attachments absent."""
+    row = pd.Series({
+        "id": "42", "created_at": "t", "content": "c",
+        "url": "https://example.com",
+        "media": ["https://example.com/video.mp4"],
+        "replies_count": 0, "reblogs_count": 0, "favourites_count": 0,
+    })
+    result = _post_to_dict(row)
+    assert result["media"] == ["https://example.com/video.mp4"]
 
 
 def test_post_to_dict_nan_counts():
