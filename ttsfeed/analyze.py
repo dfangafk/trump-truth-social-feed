@@ -5,21 +5,33 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from ttsfeed.config import POST_CATEGORIES
+from ttsfeed.config import MAX_TAGS_PER_POST, POST_TAGS
+
+POST_TAG_LINES: str = "\n".join(f"  - {name}: {desc}" for name, desc in POST_TAGS.items())
 
 logger = logging.getLogger(__name__)
 
 _PROMPT_TEMPLATE = """\
 You are analyzing Trump's Truth Social posts for a daily briefing.
 
-Posts ({n} total):
+Substantive posts ({n} total):
 {numbered_posts}
 
-Select all applicable categories from this fixed list:
-{categories}
+Assign each post up to {max_tags} categories from this list:
+{category_lines}
 
 Respond with valid JSON only, no markdown:
-{{"summary": "<2-3 sentence summary of key themes>", "post_categories": {{"<post id>": ["<matching categories>"]}}}}"""
+{{"summary": "<2-3 sentence daily overview>", "posts": [{{"id": "<post id>", "categories": ["<category names>"]}}]}}"""
+
+
+def _is_reblog(post: dict) -> bool:
+    """Return True if the post is a reblog (starts with 'RT ')."""
+    return post.get("content", "").startswith("RT ")
+
+
+def _has_content(post: dict) -> bool:
+    """Return True if the post has non-empty text content."""
+    return post.get("content", "").strip() != ""
 
 
 @dataclass
@@ -28,33 +40,65 @@ class EnrichResult:
 
     daily_summary: str
     post_categories: dict[str, list[str]] = field(default_factory=dict)
+    post_is_reblog: dict[str, bool] = field(default_factory=dict)
 
 
 def analyze_posts(posts: list[dict], complete: Callable[[str], str]) -> EnrichResult:
-    """Send all posts to the LLM and return a summary and per-post categories.
+    """Pre-filter posts then send substantive posts to the LLM for categorization.
+
+    Empty-content posts (media/link) and reblogs (RT prefix) are classified
+    programmatically without an LLM call. Only substantive posts are batched
+    into a single LLM call.
 
     Args:
-        posts: List of post dicts (must contain a ``content`` key).
+        posts: List of post dicts (must contain ``id`` and ``content`` keys).
         complete: Callable that accepts a prompt string and returns the LLM response.
 
     Returns:
-        EnrichResult with ``daily_summary`` and ``post_categories``.
+        EnrichResult with ``daily_summary``, ``post_categories``, and ``post_is_reblog``.
 
     Raises:
         ValueError: If the LLM response cannot be parsed as valid JSON with expected keys.
         Exception: Any exception raised by ``complete`` is propagated to the caller.
     """
     if not posts:
-        return EnrichResult(daily_summary="", post_categories={})
+        return EnrichResult(daily_summary="", post_categories={}, post_is_reblog={})
+
+    # Pre-classify posts: skip empty and reblogs; batch substantive ones for LLM.
+    substantive: list[dict] = []
+    post_categories: dict[str, list[str]] = {}
+    post_is_reblog: dict[str, bool] = {}
+
+    for post in posts:
+        post_id = str(post.get("id", ""))
+        if not _has_content(post):
+            # Empty content — media/link post; no is_reblog entry
+            post_categories[post_id] = []
+        elif _is_reblog(post):
+            # Reblog/RT — mark as reblog, skip LLM
+            post_categories[post_id] = []
+            post_is_reblog[post_id] = True
+        else:
+            # Substantive — send to LLM
+            substantive.append(post)
+            post_is_reblog[post_id] = False
+
+    if not substantive:
+        return EnrichResult(
+            daily_summary="",
+            post_categories=post_categories,
+            post_is_reblog=post_is_reblog,
+        )
 
     numbered_posts = "\n".join(
         f"{i + 1}. [id={p.get('id', '')}] {p.get('content', '')}"
-        for i, p in enumerate(posts)
+        for i, p in enumerate(substantive)
     )
     prompt = _PROMPT_TEMPLATE.format(
-        n=len(posts),
+        n=len(substantive),
         numbered_posts=numbered_posts,
-        categories=", ".join(POST_CATEGORIES),
+        max_tags=MAX_TAGS_PER_POST,
+        category_lines=POST_TAG_LINES,
     )
 
     raw = complete(prompt)
@@ -64,13 +108,19 @@ def analyze_posts(posts: list[dict], complete: Callable[[str], str]) -> EnrichRe
     except json.JSONDecodeError as exc:
         raise ValueError(f"LLM returned non-JSON response: {raw!r}") from exc
 
-    if "summary" not in parsed or "post_categories" not in parsed:
+    if "summary" not in parsed or "posts" not in parsed:
         raise ValueError(
-            "LLM response missing required keys 'summary'/'post_categories': "
+            "LLM response missing required keys 'summary'/'posts': "
             f"{parsed!r}"
         )
 
+    # Merge LLM per-post categories with pre-classified results
+    for entry in parsed["posts"]:
+        pid = str(entry.get("id", ""))
+        post_categories[pid] = list(entry.get("categories", []))
+
     return EnrichResult(
         daily_summary=str(parsed["summary"]),
-        post_categories=dict(parsed["post_categories"]),
+        post_categories=post_categories,
+        post_is_reblog=post_is_reblog,
     )

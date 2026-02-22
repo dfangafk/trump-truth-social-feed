@@ -76,7 +76,7 @@ trump-truth-social-feed/
 │ _post_to_dict()      │  │ ARCHIVE_URL_PARQUET/JSON         │
 │   ↓                  │  │ TRUTH_SOCIAL_PROFILE_URL         │
 │ save_output()        │  │ RAW_OUTPUT_DIR, ENRICHED_OUTPUT_DIR │
-│                      │  │ POST_CATEGORIES                  │
+│                      │  │ CATEGORIES, CATEGORY_LINES       │
 └──────────────────────┘  │ raw_output_path(date), enriched_output_path(date) │
                           └──────────────────────────────────┘
 ```
@@ -132,11 +132,13 @@ send_notification()         ← [optional] send Gmail digest; skipped if SMTP cr
 | `SENDER_GMAIL`            | Dotenv/env-backed Gmail sender address — must be `@gmail.com` (empty = notify disabled) |
 | `GMAIL_APP_PASSWORD`      | Dotenv/env-backed Gmail App Password (16-char) |
 | `RECEIVER_EMAIL`          | Dotenv/env-backed recipient address (any provider) |
-| `POST_CATEGORIES`         | Fixed taxonomy list for LLM categorization |
+| `CATEGORIES`              | `dict[str, str]` mapping category name → description (single source of truth) |
+| `MAX_TAGS_PER_POST`       | Max number of categories assignable to a single post (`3`) |
+| `CATEGORY_LINES`          | Pre-formatted `"  - name: description\n..."` string for LLM prompts |
 | `raw_output_path(date)`   | → `data/raw/YYYY-MM-DD.json`             |
 | `enriched_output_path(date)` | → `data/enriched/YYYY-MM-DD.json`    |
 
-`config.py` calls `load_dotenv()` at import time so local `.env` values are loaded once and exposed through constants.
+`config.py` calls `load_dotenv()` at import time so local `.env` values are loaded once and exposed through constants. Category definitions live directly in `config.py` as the `CATEGORIES` dict — no external file read required.
 
 ### `fetch.py` — Download, Parse & Filter
 
@@ -151,14 +153,26 @@ send_notification()         ← [optional] send Gmail digest; skipped if SMTP cr
 | Function             | Role                                                                                        |
 |----------------------|---------------------------------------------------------------------------------------------|
 | `_post_to_dict(row)` | Row → dict with safe NaN/media handling                                                     |
-| `save_output()`      | Write JSON: `{as_of, window_hours, summary, new_posts}`; if enriched, adds `daily_summary` and per-post `categories`; supports explicit output filename |
+| `save_output()`      | Write JSON: `{as_of, window_hours, summary, new_posts}`; if enriched, adds `daily_summary`, per-post `categories`, and `is_reblog` (True/False for posts with content; absent for empty posts); supports explicit output filename |
 
 ### `analyze.py` — LLM Enrichment
 
 | Export                  | Role                                            |
 |-------------------------|-------------------------------------------------|
-| `EnrichResult`          | Dataclass: `daily_summary: str`, `post_categories: dict[str, list[str]]` |
-| `analyze_posts(posts, complete)` | Build prompt, call `complete: Callable[[str], str]`, parse JSON response → `EnrichResult` |
+| `EnrichResult`          | Dataclass: `daily_summary: str`, `post_categories: dict[str, list[str]]`, `post_is_reblog: dict[str, bool]` |
+| `_is_reblog(post)`      | Returns `True` if `content` starts with `"RT "` |
+| `_has_content(post)`    | Returns `True` if `content.strip()` is non-empty |
+| `analyze_posts(posts, complete)` | Pre-filter posts; batch substantive posts to LLM; parse response → `EnrichResult` |
+
+**Pre-filter logic** (runs before any LLM call):
+- **Empty content** (`content.strip() == ""`): media/link post → `categories: []`, no `is_reblog` entry
+- **Reblog** (`content.startswith("RT ")`): repost → `categories: [], is_reblog: True`
+- **Substantive**: has text content → batched in single LLM call → `categories: [...]`, `is_reblog: False`
+
+**LLM response schema** (substantive posts only):
+```json
+{"summary": "2-3 sentence overview", "posts": [{"id": "...", "categories": ["..."]}]}
+```
 
 The `complete` callable is injected by `pipeline.py` (obtained from `llm.build_complete_fn()`), keeping `analyze.py` free of CLI/subprocess concerns and fully unit-testable with a plain mock. On any JSON parse failure, `analyze_posts` raises `ValueError` so the caller can catch and skip enrichment gracefully.
 
@@ -242,14 +256,17 @@ With enrichment (provider selected via `LLM_PROVIDER` or found by `auto` fallbac
     "daily_summary": "Trump posted primarily about immigration..."
   },
   "new_posts": [
-    {
-      "id": "123",
-      "content": "...",
-      "categories": ["immigration", "media criticism"]
-    }
+    {"id": "123", "content": "We must secure our border!", "categories": ["Border & Immigration"], "is_reblog": false},
+    {"id": "124", "content": "RT @someone: reposted text", "categories": [], "is_reblog": true},
+    {"id": "125", "content": "", "categories": []}
   ]
 }
 ```
+
+Per-post `is_reblog` rules:
+- Substantive post (has text, not RT): `"is_reblog": false`
+- Reblog (starts with `"RT "`): `"is_reblog": true`
+- Empty content (media/link): no `is_reblog` field
 
 ---
 
@@ -266,7 +283,7 @@ pytest
 | File               | What's Covered                                                    |
 |--------------------|-------------------------------------------------------------------|
 | `test_notify.py`   | `send_notification`: SMTP call verified, correct subject/body, early-return when env vars missing |
-| `test_analyze.py`  | `analyze_posts`: success path, empty posts, malformed JSON, missing keys, propagated exceptions |
+| `test_analyze.py`  | `analyze_posts`: success path, empty posts, malformed JSON, missing keys, propagated exceptions; `_is_reblog`/`_has_content` helpers; pre-filter exclusion of reblogs/empty posts from LLM; all-non-substantive skips LLM |
 | `test_config.py`   | Path formatting, zero-padded dates                                |
 | `test_export.py`   | `_post_to_dict` (basic fields, list media, JSON-string media, NaN counts, None media), `save_output` (JSON structure, zero-post output, per-post enrichment categories) |
 | `test_fetch.py`    | Download (success + fallback + failure), parsing (Parquet + JSON), ID normalization, sorting, `filter_recent_posts` (recent/none/all/custom window, defaults to now) |

@@ -29,17 +29,20 @@ LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "auto")
 LLM_MODEL: str | None = os.getenv("LLM_MODEL")
 
 
-POST_CATEGORIES: list[str] = [
-    "immigration",
-    "election integrity",
-    "media criticism",
-    "economy / trade",
-    "foreign policy",
-    "legal / courts",
-    "endorsements",
-    "personal attacks",
-    "MAGA / rallies",
-]
+POST_TAGS: dict[str, str] = {
+    "Elections & Campaigns": "Elections, voting, polling, endorsements, rallies, and campaign competition.",
+    "Tariffs & Trade": "Tariffs, trade deficits/surpluses, trade deals, and import/export policy.",
+    "Economy, Jobs & Inflation": "Economic growth, labor market conditions, wages, inflation, and business activity.",
+    "Taxes & Regulation": "Tax policy, regulatory burden, deregulation, permits, and compliance.",
+    "Border & Immigration": "Border enforcement, migration, asylum, deportation, and entry policy.",
+    "Crime & Public Safety": "Crime trends, policing, drugs/fentanyl, gangs, and local public safety.",
+    "Courts & Legal Proceedings": "Courts, judges, trials, indictments, rulings, constitutional and legal claims.",
+    "Foreign Affairs & Defense": "International conflicts, geopolitics, military posture, alliances, and national security.",
+    "Media & Public Narrative": "Media coverage, press criticism, narrative framing, speech and culture debates.",
+    "Other": "Fallback when no topical category is a clear fit.",
+}
+
+MAX_TAGS_PER_POST: int = 3
 
 
 # Email notification — override via .env or environment variables.
