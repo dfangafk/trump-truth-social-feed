@@ -1622,7 +1622,7 @@ wheels = [
 ]
 
 [[package]]
-name = "trump-truth-social-enrich"
+name = "trump-truth-social-feed"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

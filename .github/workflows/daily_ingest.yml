@@ -25,7 +25,7 @@ jobs:
         run: uv sync
 
       - name: Run pipeline
-        run: uv run python -m ttsenrich.pipeline
+        run: uv run python -m ttsfeed.pipeline
         env:
           LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}

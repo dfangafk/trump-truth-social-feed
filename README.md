@@ -1,6 +1,6 @@
-# trump-truth-social-enrich
+# trump-truth-social-feed
 
-[![Daily Truth Social Enrich](https://github.com/dfangafk/trump-truth-social-enrich/actions/workflows/daily_ingest.yml/badge.svg)](https://github.com/dfangafk/trump-truth-social-enrich/actions/workflows/daily_ingest.yml)
+[![Daily Truth Social Enrich](https://github.com/dfangafk/trump-truth-social-feed/actions/workflows/daily_ingest.yml/badge.svg)](https://github.com/dfangafk/trump-truth-social-feed/actions/workflows/daily_ingest.yml)
 
 Daily LLM-enriched feed of Trump's Truth Social posts — automatically categorized and summarized.
 
@@ -119,11 +119,11 @@ The upstream archive is hosted at [stiles/trump-truth-social-archive](https://gi
 **Prerequisites**: Python 3.12+, [`uv`](https://docs.astral.sh/uv/)
 
 ```bash
-git clone https://github.com/dfangafk/trump-truth-social-enrich.git
-cd trump-truth-social-enrich
+git clone https://github.com/dfangafk/trump-truth-social-feed.git
+cd trump-truth-social-feed
 uv sync
 cp .env.example .env   # add LLM credentials
-uv run python -m ttsenrich.pipeline
+uv run python -m ttsfeed.pipeline
 ```
 
 ---
@@ -134,7 +134,7 @@ The workflow (`.github/workflows/daily_ingest.yml`) runs daily at **23:30 UTC** 
 
 On each run it:
 1. Installs dependencies with `uv`
-2. Runs `ttsenrich.pipeline`
+2. Runs `ttsfeed.pipeline`
 3. Commits any new files in `data/raw/` and `data/enriched/` as `github-actions[bot]`
 
 LLM credentials are stored as GitHub Actions secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`) and repository variables (`LLM_PROVIDER`, `LLM_MODEL`).
@@ -144,8 +144,8 @@ LLM credentials are stored as GitHub Actions secrets (`ANTHROPIC_API_KEY`, `OPEN
 ## Project Structure
 
 ```
-trump-truth-social-enrich/
-├── ttsenrich/
+trump-truth-social-feed/
+├── ttsfeed/
 │   ├── config.py      # Constants, paths, category taxonomy
 │   ├── fetch.py       # Download archive, parse to DataFrame
 │   ├── analyze.py     # LLM prompt construction and response parsing

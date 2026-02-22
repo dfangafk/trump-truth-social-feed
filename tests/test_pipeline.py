@@ -1,30 +1,30 @@
-"""Tests for ttsenrich.pipeline — CLI orchestrator."""
+"""Tests for ttsfeed.pipeline — CLI orchestrator."""
 
-from ttsenrich.config import ENRICHED_OUTPUT_DIR, RAW_OUTPUT_DIR
+from ttsfeed.config import ENRICHED_OUTPUT_DIR, RAW_OUTPUT_DIR
 import pandas as pd
 import pytest
 
-from ttsenrich.pipeline import main
+from ttsfeed.pipeline import main
 
 
 def test_main_no_llm_saves_once(mocker):
     mock_df = pd.DataFrame({"id": ["1"], "created_at": ["2025-01-15T10:00:00Z"]})
     mock_download = mocker.patch(
-        "ttsenrich.pipeline.download_archive",
+        "ttsfeed.pipeline.download_archive",
         return_value=(b"raw", "parquet"),
     )
     mock_parse = mocker.patch(
-        "ttsenrich.pipeline.bytes_to_dataframe",
+        "ttsfeed.pipeline.bytes_to_dataframe",
         return_value=mock_df,
     )
     mock_filter = mocker.patch(
-        "ttsenrich.pipeline.filter_recent_posts",
+        "ttsfeed.pipeline.filter_recent_posts",
         return_value=mock_df,
     )
-    mock_save = mocker.patch("ttsenrich.pipeline.save_output")
+    mock_save = mocker.patch("ttsfeed.pipeline.save_output")
     mock_now = pd.Timestamp("2025-06-15T12:00:00Z")
-    mocker.patch("ttsenrich.pipeline.pd.Timestamp.now", return_value=mock_now)
-    mocker.patch("ttsenrich.pipeline.build_complete_fn", return_value=None)
+    mocker.patch("ttsfeed.pipeline.pd.Timestamp.now", return_value=mock_now)
+    mocker.patch("ttsfeed.pipeline.build_complete_fn", return_value=None)
 
     main()
 
@@ -42,16 +42,16 @@ def test_main_no_llm_saves_once(mocker):
 
 def test_main_with_llm_saves_twice(mocker):
     mock_df = pd.DataFrame({"id": ["1"], "created_at": ["2025-01-15T10:00:00Z"]})
-    mocker.patch("ttsenrich.pipeline.download_archive", return_value=(b"raw", "parquet"))
-    mocker.patch("ttsenrich.pipeline.bytes_to_dataframe", return_value=mock_df)
-    mocker.patch("ttsenrich.pipeline.filter_recent_posts", return_value=mock_df)
+    mocker.patch("ttsfeed.pipeline.download_archive", return_value=(b"raw", "parquet"))
+    mocker.patch("ttsfeed.pipeline.bytes_to_dataframe", return_value=mock_df)
+    mocker.patch("ttsfeed.pipeline.filter_recent_posts", return_value=mock_df)
     mock_now = pd.Timestamp("2025-06-15T12:00:00Z")
-    mocker.patch("ttsenrich.pipeline.pd.Timestamp.now", return_value=mock_now)
+    mocker.patch("ttsfeed.pipeline.pd.Timestamp.now", return_value=mock_now)
     mock_complete = mocker.Mock(return_value='{"summary":"x","post_categories":{"1":["cat"]}}')
-    mocker.patch("ttsenrich.pipeline.build_complete_fn", return_value=mock_complete)
+    mocker.patch("ttsfeed.pipeline.build_complete_fn", return_value=mock_complete)
     enrichment = mocker.Mock(daily_summary="summary", post_categories={"1": ["cat"]})
-    mock_analyze = mocker.patch("ttsenrich.pipeline.analyze_posts", return_value=enrichment)
-    mock_save = mocker.patch("ttsenrich.pipeline.save_output")
+    mock_analyze = mocker.patch("ttsfeed.pipeline.analyze_posts", return_value=enrichment)
+    mock_save = mocker.patch("ttsfeed.pipeline.save_output")
 
     main()
 
@@ -82,18 +82,18 @@ def test_main_with_llm_saves_twice(mocker):
 
 def test_main_llm_failure_saves_once(mocker):
     mock_df = pd.DataFrame({"id": ["1"], "created_at": ["2025-01-15T10:00:00Z"]})
-    mocker.patch("ttsenrich.pipeline.download_archive", return_value=(b"raw", "parquet"))
-    mocker.patch("ttsenrich.pipeline.bytes_to_dataframe", return_value=mock_df)
-    mocker.patch("ttsenrich.pipeline.filter_recent_posts", return_value=mock_df)
+    mocker.patch("ttsfeed.pipeline.download_archive", return_value=(b"raw", "parquet"))
+    mocker.patch("ttsfeed.pipeline.bytes_to_dataframe", return_value=mock_df)
+    mocker.patch("ttsfeed.pipeline.filter_recent_posts", return_value=mock_df)
     mock_now = pd.Timestamp("2025-06-15T12:00:00Z")
-    mocker.patch("ttsenrich.pipeline.pd.Timestamp.now", return_value=mock_now)
+    mocker.patch("ttsfeed.pipeline.pd.Timestamp.now", return_value=mock_now)
     mock_complete = mocker.Mock(return_value='{"summary":"x","post_categories":{"1":["cat"]}}')
-    mocker.patch("ttsenrich.pipeline.build_complete_fn", return_value=mock_complete)
+    mocker.patch("ttsfeed.pipeline.build_complete_fn", return_value=mock_complete)
     mocker.patch(
-        "ttsenrich.pipeline.analyze_posts",
+        "ttsfeed.pipeline.analyze_posts",
         side_effect=RuntimeError("llm failed"),
     )
-    mock_save = mocker.patch("ttsenrich.pipeline.save_output")
+    mock_save = mocker.patch("ttsfeed.pipeline.save_output")
 
     main()
 
@@ -108,7 +108,7 @@ def test_main_llm_failure_saves_once(mocker):
 
 def test_main_exits_on_fetch_failure(mocker):
     mocker.patch(
-        "ttsenrich.pipeline.download_archive",
+        "ttsfeed.pipeline.download_archive",
         side_effect=RuntimeError("network down"),
     )
 
