@@ -15,7 +15,9 @@ POSTS
 {% if post.content | length > 800 %}{{ post.content[:800] }}...{% else %}{{ post.content }}{% endif %}
 
 {% if post.categories %}Categories: {{ post.categories | join(", ") }}{% endif %}
-
+{% if post.media %}
+{% for attachment in post.media %}Media: {{ attachment.url }}
+{% endfor %}{% endif %}
 View on Truth Social: {{ post.url }}
 
 -----------------------------------------------------
