@@ -11,6 +11,27 @@ POST_TAG_LINES: str = "\n".join(f"  - {name}: {desc}" for name, desc in POST_TAG
 
 logger = logging.getLogger(__name__)
 
+ENRICHMENT_SCHEMA: str = json.dumps(
+    {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string"},
+            "posts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "categories": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["id", "categories"],
+                },
+            },
+        },
+        "required": ["summary", "posts"],
+    }
+)
+
 _PROMPT_TEMPLATE = """\
 You are analyzing Trump's Truth Social posts for a daily briefing.
 

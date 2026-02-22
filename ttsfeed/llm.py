@@ -10,26 +10,10 @@ from collections.abc import Callable
 
 from litellm import completion
 
+from ttsfeed.analyze import ENRICHMENT_SCHEMA
 from ttsfeed.config import LLM_MODELS, LLM_PROVIDER
 
 logger = logging.getLogger(__name__)
-
-_ENRICHMENT_SCHEMA: str = json.dumps(
-    {
-        "type": "object",
-        "properties": {
-            "summary": {"type": "string"},
-            "post_categories": {
-                "type": "object",
-                "additionalProperties": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                },
-            },
-        },
-        "required": ["summary", "post_categories"],
-    }
-)
 
 
 def _call_llm_api(prompt: str) -> str:
@@ -87,7 +71,7 @@ def _call_claude_cli(prompt: str) -> str:
             "--output-format",
             "json",
             "--json-schema",
-            _ENRICHMENT_SCHEMA,
+            ENRICHMENT_SCHEMA,
             "--no-session-persistence",
         ],
         capture_output=True,
@@ -127,7 +111,7 @@ def _call_codex_cli(prompt: str) -> str:
         suffix=".json",
         delete=False,
     ) as schema_file:
-        schema_file.write(_ENRICHMENT_SCHEMA)
+        schema_file.write(ENRICHMENT_SCHEMA)
         schema_path = schema_file.name
 
     try:
