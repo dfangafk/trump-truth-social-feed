@@ -1,10 +1,10 @@
-"""Tests for ttsenrich.analyze."""
+"""Tests for ttsfeed.analyze."""
 
 import json
 
 import pytest
 
-from ttsenrich.analyze import EnrichResult, analyze_posts
+from ttsfeed.analyze import EnrichResult, analyze_posts
 
 
 def _make_complete(response: str):

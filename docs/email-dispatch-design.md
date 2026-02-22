@@ -46,7 +46,7 @@ A system to send daily Truth Social post digests to subscribed email addresses.
 ### Option B: New repo importing this one as a library
 - Clean separation of concerns
 - Different deployment models for each system
-- `ttsenrich` package API is already well-defined for this
+- `ttsfeed` package API is already well-defined for this
 
 ### Option C: New repo consuming JSON output (no library dependency)
 - The pipeline already commits daily JSON to `data/output/`

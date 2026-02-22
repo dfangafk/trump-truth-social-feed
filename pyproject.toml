@@ -1,5 +1,5 @@
 [project]
-name = "trump-truth-social-enrich"
+name = "trump-truth-social-feed"
 version = "0.1.0"
 description = "Daily LLM enrichment pipeline for Trump's Truth Social posts"
 readme = "README.md"
@@ -22,4 +22,4 @@ dev = [
 testpaths = ["tests"]
 
 [project.scripts]
-ttsenrich = "ttsenrich.pipeline:main"
+ttsfeed = "ttsfeed.pipeline:main"
