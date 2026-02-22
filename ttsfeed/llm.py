@@ -40,8 +40,6 @@ def _call_llm_api(prompt: str) -> str:
                 model=m,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"},
-                temperature=0,
-                drop_params=True,
                 num_retries=3,
             )
             return response.choices[0].message.content
