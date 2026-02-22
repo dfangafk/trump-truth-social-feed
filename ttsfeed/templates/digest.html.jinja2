@@ -63,7 +63,7 @@
         {% endif %}
         {% if post.media %}
         <div class="media-links" style="margin-bottom:8px;">
-          {% for attachment in post.media %}<div><a href="{{ attachment.url }}" style="color:#555;font-size:13px;">{{ attachment.url }}</a></div>{% endfor %}
+          {% for url in post.media %}<div><a href="{{ url }}" style="color:#555;font-size:13px;">{{ url }}</a></div>{% endfor %}
         </div>
         {% endif %}
         <div class="view-link"><a href="{{ post.url }}">View on Truth Social &rarr;</a></div>
