@@ -141,6 +141,14 @@ LLM credentials are stored as GitHub Actions secrets (`ANTHROPIC_API_KEY`, `OPEN
 
 ---
 
+## Limitations
+
+**Cron job delay** — GitHub Actions scheduled workflows can be delayed during high-load periods (especially at the top of the hour). If load is high enough, queued jobs may be dropped entirely.
+
+**Gmail sender only** — The email dispatch module supports Gmail as the sending account, authenticated via an [App Password](https://myaccount.google.com/apppasswords) (requires 2-Step Verification). Other SMTP providers are not currently supported.
+
+---
+
 ## Project Structure
 
 ```
