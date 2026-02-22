@@ -12,11 +12,12 @@ trump-truth-social-enrich/
 ├── ttsenrich/                # Main package
 │   ├── __init__.py
 │   ├── analyze.py          # LLM enrichment → EnrichResult (summary + per-post categories)
-│   ├── config.py           # URLs, paths, output dirs, dotenv-backed LLM config constants
+│   ├── config.py           # URLs, paths, output dirs, dotenv-backed LLM/SMTP config constants
 │   ├── export.py           # Serialize posts to JSON, write daily output files
 │   ├── fetch.py            # Download archive → parse to DataFrame → filter recent posts
 │   ├── llm.py              # LLM provider abstraction — explicit `LLM_PROVIDER` selection + auto fallback
-│   └── pipeline.py         # CLI entry point (fetch → filter → save → analyze → save)
+│   ├── notify.py           # Email digest after enrichment — fails silently if credentials absent
+│   └── pipeline.py         # CLI entry point (fetch → filter → save → analyze → save → notify)
 ├── tests/
 │   ├── conftest.py         # Shared fixtures (sample DataFrames, bytes)
 │   ├── test_analyze.py
@@ -47,6 +48,7 @@ trump-truth-social-enrich/
 │    5. complete = build_complete_fn()          [from llm.py]  │
 │    6. enrichment = analyze_posts(posts, complete)  [opt]     │
 │    7. save_output(..., enrichment=..., output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json") [opt] │
+│    8. send_notification(reference_time, new_posts, enrichment) [from notify.py] │
 └──────────┬────────────────────────────┬───────────────────────┘
            │                            │
            ▼                            ▼
@@ -106,6 +108,9 @@ analyze_posts()             ← [optional] LLM call via complete: Callable
       ▼
 save_output(output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json")
                            ← phase 2: persist enriched output if successful
+      │
+      ▼
+send_notification()         ← [optional] send Gmail digest; skipped if SMTP credentials absent
 ```
 
 ---
@@ -124,6 +129,9 @@ save_output(output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json")
 | `ENRICHED_OUTPUT_DIR`     | `data/enriched/`                         |
 | `LLM_PROVIDER`            | Dotenv/env-backed provider selector (`auto` default) |
 | `LLM_MODEL`               | Dotenv/env-backed API model string (or `None`) |
+| `GMAIL_USER`              | Dotenv/env-backed Gmail sender address (empty = notify disabled) |
+| `GMAIL_APP_PASS`          | Dotenv/env-backed Gmail App Password (16-char) |
+| `NOTIFY_EMAIL`            | Dotenv/env-backed recipient address |
 | `POST_CATEGORIES`         | Fixed taxonomy list for LLM categorization |
 | `raw_output_path(date)`   | → `data/raw/YYYY-MM-DD.json`             |
 | `enriched_output_path(date)` | → `data/enriched/YYYY-MM-DD.json`    |
@@ -165,13 +173,21 @@ The `complete` callable is injected by `pipeline.py` (obtained from `llm.build_c
 
 `LLM_PROVIDER` controls which provider is used: `api`, `claude_code_cli`, `codex_cli`, or `auto` (default). `llm.py` reads `LLM_PROVIDER` and `LLM_MODEL` from `config.py`, where they are loaded from `.env`/environment at startup. In `api` mode, `LLM_MODEL` must be set (e.g. `anthropic/claude-opus-4-6` or `openai/gpt-4o`) and LiteLLM reads credentials from environment variables such as `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. `claude_code_cli` and `codex_cli` target their CLIs (`claude -p` and `codex exec`) in headless/non-interactive operation, intended for local testing. In `auto`, selection falls back API → Claude CLI → Codex CLI. If the requested provider is unavailable, `build_complete_fn()` returns `None` and enrichment is skipped.
 
+### `notify.py` — Email Notification
+
+| Export                    | Role                                                              |
+|---------------------------|-------------------------------------------------------------------|
+| `send_notification(reference_time, new_posts, enrichment)` | Build and send daily digest email via Gmail SMTP SSL (port 465). Skips silently if `GMAIL_USER`, `GMAIL_APP_PASS`, or `NOTIFY_EMAIL` are unset. Catches all send errors and logs as warnings so the pipeline never fails due to email issues. |
+
+Subject: `Trump Truth Social — YYYY-MM-DD (N new posts)`. Body includes date, post count, daily summary (or "Enrichment not available." if enrichment is `None`), and per-post content, categories, and URL.
+
 ### `pipeline.py` — CLI Entry Point
 
 ```bash
 uv run python -m ttsenrich.pipeline   # run for today (enrichment if API model, claude CLI, or codex CLI available)
 ```
 
-Calls `download_archive()` → `bytes_to_dataframe()` → `filter_recent_posts()` → `save_output(..., output_dir=RAW_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (always) → `build_complete_fn()` → `analyze_posts()` (if `complete` is not `None`) → `save_output(..., enrichment=enrichment, output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (only if enrichment succeeds). Exits with code 1 on fetch errors. LLM failures are caught and logged as warnings, while the raw file remains intact.
+Calls `download_archive()` → `bytes_to_dataframe()` → `filter_recent_posts()` → `save_output(..., output_dir=RAW_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (always) → `build_complete_fn()` → `analyze_posts()` (if `complete` is not `None`) → `save_output(..., enrichment=enrichment, output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (only if enrichment succeeds) → `send_notification()`. Exits with code 1 on fetch errors. LLM failures are caught and logged as warnings, while the raw file remains intact. Email send errors are also caught and logged as warnings.
 
 ---
 
@@ -239,7 +255,7 @@ With enrichment (provider selected via `LLM_PROVIDER` or found by `auto` fallbac
 
 ## Tests
 
-Tests across 6 files. Run with:
+Tests across 7 files. Run with:
 
 ```bash
 pytest
@@ -249,6 +265,7 @@ pytest
 
 | File               | What's Covered                                                    |
 |--------------------|-------------------------------------------------------------------|
+| `test_notify.py`   | `send_notification`: SMTP call verified, correct subject/body, early-return when env vars missing |
 | `test_analyze.py`  | `analyze_posts`: success path, empty posts, malformed JSON, missing keys, propagated exceptions |
 | `test_config.py`   | Path formatting, zero-padded dates                                |
 | `test_export.py`   | `_post_to_dict` (basic fields, list media, JSON-string media, NaN counts, None media), `save_output` (JSON structure, zero-post output, per-post enrichment categories) |
