@@ -8,8 +8,8 @@ from email.mime.text import MIMEText
 
 import pandas as pd
 
-from ttsenrich.analyze import EnrichResult
-from ttsenrich.config import GMAIL_APP_PASS, GMAIL_USER, NOTIFY_EMAIL
+from ttsfeed.analyze import EnrichResult
+from ttsfeed.config import GMAIL_APP_PASS, GMAIL_USER, NOTIFY_EMAIL
 
 logger = logging.getLogger(__name__)
 
