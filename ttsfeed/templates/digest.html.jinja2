@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trump Truth Social Digest — {{ date }}</title>
+  <style>
+    body { font-family: Georgia, serif; background: #f5f5f5; margin: 0; padding: 0; }
+    .wrapper { max-width: 620px; margin: 0 auto; background: #ffffff; }
+    .header { background: #b22234; color: #ffffff; padding: 24px 32px; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; letter-spacing: 0.5px; }
+    .header p { margin: 4px 0 0; font-size: 14px; opacity: 0.85; }
+    .body { padding: 24px 32px; }
+    .greeting { font-size: 16px; margin-bottom: 16px; }
+    .summary-box { background: #fff8e1; border-left: 4px solid #f5a623; padding: 16px 20px; margin-bottom: 24px; border-radius: 2px; }
+    .summary-box .count { font-size: 13px; color: #888; margin-bottom: 6px; }
+    .summary-box p { margin: 0; font-size: 15px; line-height: 1.5; }
+    .post { border-bottom: 1px solid #e8e8e8; padding: 16px 0; }
+    .post:last-child { border-bottom: none; }
+    .post-meta { font-size: 12px; color: #999; margin-bottom: 6px; }
+    .post-content { font-size: 15px; line-height: 1.6; margin: 0 0 10px; }
+    .categories { margin-bottom: 8px; }
+    .pill { display: inline-block; background: #e8f0fe; color: #1a73e8; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-right: 4px; }
+    .view-link { font-size: 13px; }
+    .view-link a { color: #b22234; text-decoration: none; }
+    .footer { background: #f0f0f0; padding: 20px 32px; font-size: 12px; color: #888; text-align: center; line-height: 1.6; }
+    .footer a { color: #b22234; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <!-- Header -->
+    <div class="header">
+      <h1>Trump Truth Social Digest</h1>
+      <p>{{ date }}</p>
+    </div>
+
+    <div class="body">
+      <!-- Greeting -->
+      <p class="greeting">Hi there,</p>
+
+      <!-- Daily Summary -->
+      <div class="summary-box">
+        <div class="count">{{ data.summary.new_posts_count }} post{{ "s" if data.summary.new_posts_count != 1 else "" }} today</div>
+        <p>{{ data.summary.daily_summary }}</p>
+      </div>
+
+      <!-- Posts -->
+      {% for post in data.new_posts %}
+      <div class="post">
+        <div class="post-meta">{{ post.created_at_et }}</div>
+        <p class="post-content">
+          {% if post.content | length > 800 %}
+            {{ post.content[:800] }}&hellip;
+          {% else %}
+            {{ post.content }}
+          {% endif %}
+        </p>
+        {% if post.categories %}
+        <div class="categories">
+          {% for cat in post.categories %}<span class="pill">{{ cat }}</span>{% endfor %}
+        </div>
+        {% endif %}
+        <div class="view-link"><a href="{{ post.url }}">View on Truth Social &rarr;</a></div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>
+        You are receiving this because you subscribed to the Trump Truth Social Digest.<br>
+        <a href="{{ unsubscribe_url }}">Unsubscribe</a>
+      </p>
+      <p>Physical address placeholder &bull; 123 Main St, Anytown, USA 00000</p>
+    </div>
+  </div>
+</body>
+</html>

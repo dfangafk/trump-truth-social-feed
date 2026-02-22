@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from ttsfeed.analyze import EnrichResult
-from ttsfeed.notify import _build_body, send_notification
+from ttsfeed.notify import _build_template_context, _render_text, _to_et_display, send_notification
 
 
 REFERENCE_TIME = pd.Timestamp("2026-02-21T14:00:00Z")
@@ -120,25 +120,46 @@ def test_send_notification_logs_warning_on_smtp_error(mocker):
     send_notification(REFERENCE_TIME, SAMPLE_POSTS, None)
 
 
-def test_build_body_no_enrichment():
-    """Body without enrichment shows 'Enrichment not available.' in summary."""
-    body = _build_body("2026-02-21", SAMPLE_POSTS, None)
-    assert "Enrichment not available." in body
-    assert "First post content" in body
-    assert "Second post content" in body
+def test_template_context_no_enrichment():
+    """Context without enrichment has 'Enrichment not available.' and empty categories."""
+    ctx = _build_template_context("2026-02-21", SAMPLE_POSTS, None)
+    assert ctx["data"]["summary"]["daily_summary"] == "Enrichment not available."
+    assert all(p["categories"] == [] for p in ctx["data"]["new_posts"])
+    contents = [p["content"] for p in ctx["data"]["new_posts"]]
+    assert "First post content" in contents
+    assert "Second post content" in contents
 
 
-def test_build_body_with_enrichment():
-    """Body with enrichment shows summary and per-post categories."""
-    body = _build_body("2026-02-21", SAMPLE_POSTS, SAMPLE_ENRICHMENT)
-    assert "Trump posted about trade and immigration." in body
-    assert "economy / trade" in body
-    assert "immigration" in body
-    assert "First post content" in body
+def test_template_context_with_enrichment():
+    """Context with enrichment populates summary and per-post categories."""
+    ctx = _build_template_context("2026-02-21", SAMPLE_POSTS, SAMPLE_ENRICHMENT)
+    assert ctx["data"]["summary"]["daily_summary"] == "Trump posted about trade and immigration."
+    cats_by_id = {p["id"]: p["categories"] for p in ctx["data"]["new_posts"]}
+    assert cats_by_id["1"] == ["economy / trade"]
+    assert cats_by_id["2"] == ["immigration"]
 
 
-def test_build_body_post_urls():
-    """Body should include the URL for each post."""
-    body = _build_body("2026-02-21", SAMPLE_POSTS, None)
+def test_to_et_display_formats_correctly():
+    """UTC timestamp is converted to Eastern Time and formatted like Truth Social."""
+    # 2026-02-21T14:32:00Z = 9:32 AM EST (UTC-5)
+    assert _to_et_display("2026-02-21T14:32:00Z") == "Feb 21, 2026, 9:32 AM"
+    # 2026-02-21T12:00:00Z = 7:00 AM EST
+    assert _to_et_display("2026-02-21T12:00:00Z") == "Feb 21, 2026, 7:00 AM"
+    # Midnight UTC = 7:00 PM previous day EST
+    assert _to_et_display("2026-02-22T00:00:00Z") == "Feb 21, 2026, 7:00 PM"
+
+
+def test_template_context_includes_created_at_et():
+    """Each post in context should have a created_at_et field."""
+    ctx = _build_template_context("2026-02-21", SAMPLE_POSTS, None)
+    for post in ctx["data"]["new_posts"]:
+        assert "created_at_et" in post
+        assert "AM" in post["created_at_et"] or "PM" in post["created_at_et"]
+
+
+def test_rendered_text_contains_urls():
+    """Rendered plain-text body includes URLs for each post."""
+    ctx = _build_template_context("2026-02-21", SAMPLE_POSTS, None)
+    body = _render_text(ctx)
     assert "https://truthsocial.com/@realDonaldTrump/1" in body
     assert "https://truthsocial.com/@realDonaldTrump/2" in body
