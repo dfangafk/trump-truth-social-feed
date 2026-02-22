@@ -12,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()  # Load .env from project root when present.
 
-# Archive URLs (CNN's publicly hosted Trump Truth Social archive)
-ARCHIVE_URL_PARQUET = "https://ix.cnn.io/data/truth-social/truth_archive.parquet"
+# Archive URL (CNN's publicly hosted Trump Truth Social archive)
 ARCHIVE_URL_JSON = "https://ix.cnn.io/data/truth-social/truth_archive.json"
 
 # Truth Social profile

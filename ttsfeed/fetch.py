@@ -6,38 +6,25 @@ import logging
 import pandas as pd
 import requests
 
-from ttsfeed.config import ARCHIVE_URL_JSON, ARCHIVE_URL_PARQUET
+from ttsfeed.config import ARCHIVE_URL_JSON
 
 logger = logging.getLogger(__name__)
 
 HTTP_HEADERS = {"User-Agent": "ttsfeed/0.1 (Truth Social archive tracker)"}
 
 
-def download_archive(url: str = ARCHIVE_URL_PARQUET) -> tuple[bytes, str]:
-    """Download the archive file. Returns (raw_bytes, format).
-
-    Tries Parquet first; falls back to JSON on failure.
-    """
-    logger.info("Downloading archive from %s", url)
-    fmt = "parquet" if url == ARCHIVE_URL_PARQUET else "json"
-    try:
-        resp = requests.get(url, timeout=120, headers=HTTP_HEADERS)
-        resp.raise_for_status()
-        logger.info("Downloaded %.2f MB", len(resp.content) / 1_000_000)
-        return resp.content, fmt
-    except requests.RequestException as exc:
-        if url == ARCHIVE_URL_PARQUET:
-            logger.warning("Parquet download failed (%s), falling back to JSON", exc)
-            return download_archive(ARCHIVE_URL_JSON)
-        raise
+def download_archive() -> bytes:
+    """Download the JSON archive. Returns raw bytes."""
+    logger.info("Downloading archive from %s", ARCHIVE_URL_JSON)
+    resp = requests.get(ARCHIVE_URL_JSON, timeout=120, headers=HTTP_HEADERS)
+    resp.raise_for_status()
+    logger.info("Downloaded %.2f MB", len(resp.content) / 1_000_000)
+    return resp.content
 
 
-def bytes_to_dataframe(raw_bytes: bytes, fmt: str = "parquet") -> pd.DataFrame:
-    """Parse raw bytes into a DataFrame. Normalize id to string, sort by id."""
-    if fmt == "parquet":
-        df = pd.read_parquet(io.BytesIO(raw_bytes))
-    else:
-        df = pd.read_json(io.BytesIO(raw_bytes))
+def bytes_to_dataframe(raw_bytes: bytes) -> pd.DataFrame:
+    """Parse raw JSON bytes into a DataFrame. Normalize id to string, sort by id."""
+    df = pd.read_json(io.BytesIO(raw_bytes))
 
     if "id" in df.columns:
         df["id"] = df["id"].astype(str)
