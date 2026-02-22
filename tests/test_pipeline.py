@@ -11,7 +11,7 @@ def test_main_no_llm_saves_once(mocker):
     mock_df = pd.DataFrame({"id": ["1"], "created_at": ["2025-01-15T10:00:00Z"]})
     mock_download = mocker.patch(
         "ttsfeed.pipeline.download_archive",
-        return_value=(b"raw", "parquet"),
+        return_value=b"raw",
     )
     mock_parse = mocker.patch(
         "ttsfeed.pipeline.bytes_to_dataframe",
@@ -30,7 +30,7 @@ def test_main_no_llm_saves_once(mocker):
     main()
 
     mock_download.assert_called_once()
-    mock_parse.assert_called_once_with(b"raw", "parquet")
+    mock_parse.assert_called_once_with(b"raw")
     mock_filter.assert_called_once_with(mock_df)
     mock_save.assert_called_once_with(
         mock_df,
@@ -43,7 +43,7 @@ def test_main_no_llm_saves_once(mocker):
 
 def test_main_with_llm_saves_twice(mocker):
     mock_df = pd.DataFrame({"id": ["1"], "created_at": ["2025-01-15T10:00:00Z"]})
-    mocker.patch("ttsfeed.pipeline.download_archive", return_value=(b"raw", "parquet"))
+    mocker.patch("ttsfeed.pipeline.download_archive", return_value=b"raw")
     mocker.patch("ttsfeed.pipeline.bytes_to_dataframe", return_value=mock_df)
     mocker.patch("ttsfeed.pipeline.filter_recent_posts", return_value=mock_df)
     mock_now = pd.Timestamp("2025-06-15T12:00:00Z")
@@ -84,7 +84,7 @@ def test_main_with_llm_saves_twice(mocker):
 
 def test_main_llm_failure_saves_once(mocker):
     mock_df = pd.DataFrame({"id": ["1"], "created_at": ["2025-01-15T10:00:00Z"]})
-    mocker.patch("ttsfeed.pipeline.download_archive", return_value=(b"raw", "parquet"))
+    mocker.patch("ttsfeed.pipeline.download_archive", return_value=b"raw")
     mocker.patch("ttsfeed.pipeline.bytes_to_dataframe", return_value=mock_df)
     mocker.patch("ttsfeed.pipeline.filter_recent_posts", return_value=mock_df)
     mock_now = pd.Timestamp("2025-06-15T12:00:00Z")

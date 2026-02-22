@@ -1,7 +1,5 @@
 """Shared fixtures for Truth Social feed tests."""
 
-import io
-
 import pandas as pd
 import pytest
 
@@ -25,16 +23,8 @@ def sample_df():
         "replies_count": [1, 2, 3],
         "reblogs_count": [4, 5, 6],
         "favourites_count": [7, 8, 9],
-        "media_attachments": [None, None, None],
+        "media": [[], [], []],
     })
-
-
-@pytest.fixture
-def parquet_bytes(sample_df):
-    """Valid Parquet bytes for sample_df."""
-    buf = io.BytesIO()
-    sample_df.to_parquet(buf, index=False)
-    return buf.getvalue()
 
 
 @pytest.fixture

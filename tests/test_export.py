@@ -30,30 +30,8 @@ def test_post_to_dict_basic_fields(sample_df):
     assert isinstance(result["replies_count"], int)
 
 
-def test_post_to_dict_with_list_media():
-    row = pd.Series({
-        "id": "42", "created_at": "t", "content": "c",
-        "url": "https://example.com",
-        "media_attachments": [{"url": "https://img.example.com/photo.jpg"}],
-        "replies_count": 0, "reblogs_count": 0, "favourites_count": 0,
-    })
-    result = _post_to_dict(row)
-    assert result["media"] == ["https://img.example.com/photo.jpg"]
-
-
-def test_post_to_dict_with_json_string_media():
-    row = pd.Series({
-        "id": "42", "created_at": "t", "content": "c",
-        "url": "https://example.com",
-        "media_attachments": '[{"url": "https://img.example.com/photo.jpg"}]',
-        "replies_count": 0, "reblogs_count": 0, "favourites_count": 0,
-    })
-    result = _post_to_dict(row)
-    assert result["media"] == ["https://img.example.com/photo.jpg"]
-
-
 def test_post_to_dict_with_flat_url_media():
-    """media column (flat list of URL strings) is used when media_attachments absent."""
+    """media column (flat list of URL strings) is passed through directly."""
     row = pd.Series({
         "id": "42", "created_at": "t", "content": "c",
         "url": "https://example.com",
@@ -67,7 +45,7 @@ def test_post_to_dict_with_flat_url_media():
 def test_post_to_dict_nan_counts():
     row = pd.Series({
         "id": "42", "created_at": "t", "content": "c", "url": "u",
-        "media_attachments": None,
+        "media": None,
         "replies_count": float("nan"), "reblogs_count": None, "favourites_count": 0,
     })
     result = _post_to_dict(row)
@@ -79,7 +57,7 @@ def test_post_to_dict_nan_counts():
 def test_post_to_dict_none_media():
     row = pd.Series({
         "id": "42", "created_at": "t", "content": "c", "url": "u",
-        "media_attachments": None,
+        "media": None,
         "replies_count": 0, "reblogs_count": 0, "favourites_count": 0,
     })
     assert _post_to_dict(row)["media"] == []
