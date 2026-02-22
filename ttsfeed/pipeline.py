@@ -23,8 +23,8 @@ def main() -> None:
     logger.info("Pipeline start")
 
     try:
-        raw, fmt = download_archive()
-        df = bytes_to_dataframe(raw, fmt)
+        raw = download_archive()
+        df = bytes_to_dataframe(raw)
         logger.info("Fetched %d total posts", len(df))
     except Exception:
         logger.exception("Fetch failed")

@@ -22,32 +22,7 @@ def _safe_int(val, default: int = 0) -> int:
 
 def _post_to_dict(row: pd.Series) -> dict:
     """Convert a DataFrame row to the output dict format."""
-    media: list[str] = []
-
-    def _extract_urls(val: object) -> list[str]:
-        """Normalize a media column value to a flat list of URL strings."""
-        if isinstance(val, str):
-            try:
-                val = json.loads(val)
-            except (json.JSONDecodeError, TypeError):
-                return []
-        if not isinstance(val, list):
-            return []
-        urls = []
-        for item in val:
-            if isinstance(item, str) and item:
-                urls.append(item)
-            elif isinstance(item, dict):
-                url = item.get("url") or item.get("preview_url", "")
-                if url:
-                    urls.append(url)
-        return urls
-
-    for col in ("media_attachments", "media"):
-        if col in row.index and row[col] is not None:
-            media = _extract_urls(row[col])
-            if media:
-                break
+    media: list[str] = row.get("media") or []
 
     return {
         "id": str(row.get("id", "")),
