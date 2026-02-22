@@ -9,7 +9,7 @@ from email.mime.text import MIMEText
 import pandas as pd
 
 from ttsfeed.analyze import EnrichResult
-from ttsfeed.config import GMAIL_APP_PASS, GMAIL_USER, NOTIFY_EMAIL
+from ttsfeed.config import GMAIL_APP_PASSWORD, RECEIVER_EMAIL, SENDER_GMAIL
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +21,11 @@ def send_notification(
 ) -> None:
     """Send daily digest email after pipeline completion.
 
-    Skips silently if GMAIL_USER, GMAIL_APP_PASS, or NOTIFY_EMAIL are not set.
+    Skips silently if SENDER_GMAIL, GMAIL_APP_PASSWORD, or RECEIVER_EMAIL are not set.
     Catches and logs all exceptions to avoid failing the pipeline.
     """
-    if not (GMAIL_USER and GMAIL_APP_PASS and NOTIFY_EMAIL):
-        logger.info("Email notification skipped (GMAIL_USER/GMAIL_APP_PASS/NOTIFY_EMAIL not set)")
+    if not (SENDER_GMAIL and GMAIL_APP_PASSWORD and RECEIVER_EMAIL):
+        logger.info("Email notification skipped (SENDER_GMAIL/GMAIL_APP_PASSWORD/RECEIVER_EMAIL not set)")
         return
 
     date_str = reference_time.date().isoformat()
@@ -35,17 +35,17 @@ def send_notification(
     body = _build_body(date_str, new_posts, enrichment)
 
     msg = MIMEMultipart()
-    msg["From"] = GMAIL_USER
-    msg["To"] = NOTIFY_EMAIL
+    msg["From"] = SENDER_GMAIL
+    msg["To"] = RECEIVER_EMAIL
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain"))
 
     try:
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-            server.login(GMAIL_USER, GMAIL_APP_PASS)
+            server.login(SENDER_GMAIL, GMAIL_APP_PASSWORD)
             server.send_message(msg)
-        logger.info("Notification email sent to %s", NOTIFY_EMAIL)
+        logger.info("Notification email sent to %s", RECEIVER_EMAIL)
     except Exception:
         logger.warning("Failed to send notification email", exc_info=True)
 
