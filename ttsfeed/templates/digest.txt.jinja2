@@ -16,7 +16,7 @@ POSTS
 
 {% if post.categories %}Categories: {{ post.categories | join(", ") }}{% endif %}
 {% if post.media %}
-{% for attachment in post.media %}Media: {{ attachment.url }}
+{% for url in post.media %}Media: {{ url }}
 {% endfor %}{% endif %}
 View on Truth Social: {{ post.url }}
 
