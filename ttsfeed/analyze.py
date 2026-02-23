@@ -104,6 +104,8 @@ def analyze_posts(posts: list[dict], complete: Callable[[str], str]) -> EnrichRe
             substantive.append(post)
             post_is_reblog[post_id] = False
 
+    logger.info("Analyzing %d posts (%d substantive)", len(posts), len(substantive))
+
     if not substantive:
         return EnrichResult(
             daily_summary="",
@@ -135,6 +137,12 @@ def analyze_posts(posts: list[dict], complete: Callable[[str], str]) -> EnrichRe
             "LLM response missing required keys 'summary'/'posts': "
             f"{parsed!r}"
         )
+
+    logger.info(
+        "LLM response parsed: %d categories, summary %d chars",
+        len(parsed["posts"]),
+        len(str(parsed["summary"])),
+    )
 
     # Merge LLM per-post categories with pre-classified results
     for entry in parsed["posts"]:

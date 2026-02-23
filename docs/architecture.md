@@ -28,7 +28,8 @@ trump-truth-social-feed/
 │   └── test_pipeline.py
 └── data/                   # Generated at runtime
     ├── raw/                # Daily raw JSON output files
-    └── enriched/           # Daily enriched JSON output files
+    ├── enriched/           # Daily enriched JSON output files
+    └── logs/               # Daily run summary JSON files
 ```
 
 ---
@@ -49,6 +50,7 @@ trump-truth-social-feed/
 │    6. enrichment = analyze_posts(posts, complete)  [opt]     │
 │    7. save_output(..., enrichment=..., output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json") [opt] │
 │    8. send_notification(reference_time, new_posts, enrichment) [from notify.py] │
+│    9. _write_run_summary(run_date, t0, t1, ...)  [always]    │
 └──────────┬────────────────────────────┬───────────────────────┘
            │                            │
            ▼                            ▼
@@ -111,6 +113,9 @@ save_output(output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json")
       │
       ▼
 send_notification()         ← [optional] send Gmail digest; skipped if SMTP credentials absent
+      │
+      ▼
+_write_run_summary()        ← [always] write run log to data/logs/YYYY-MM-DD.json
 ```
 
 ---
@@ -137,6 +142,8 @@ send_notification()         ← [optional] send Gmail digest; skipped if SMTP cr
 | `CATEGORY_LINES`          | Pre-formatted `"  - name: description\n..."` string for LLM prompts |
 | `raw_output_path(date)`   | → `data/raw/YYYY-MM-DD.json`             |
 | `enriched_output_path(date)` | → `data/enriched/YYYY-MM-DD.json`    |
+| `LOGS_OUTPUT_DIR`         | `data/logs/`                             |
+| `log_output_path(date)`   | → `data/logs/YYYY-MM-DD.json`            |
 
 `config.py` calls `load_dotenv()` at import time so local `.env` values are loaded once and exposed through constants. Category definitions live directly in `config.py` as the `CATEGORIES` dict — no external file read required.
 
@@ -202,7 +209,7 @@ Subject: `Trump Truth Social — YYYY-MM-DD (N new posts)`. Body includes date, 
 uv run python -m ttsfeed.pipeline   # run for today (enrichment if API model, claude CLI, or codex CLI available)
 ```
 
-Calls `download_archive()` → `bytes_to_dataframe()` → `filter_recent_posts()` → `save_output(..., output_dir=RAW_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (always) → `build_complete_fn()` → `analyze_posts()` (if `complete` is not `None`) → `save_output(..., enrichment=enrichment, output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (only if enrichment succeeds) → `send_notification()`. Exits with code 1 on fetch errors. LLM failures are caught and logged as warnings, while the raw file remains intact. Email send errors are also caught and logged as warnings.
+Calls `download_archive()` → `bytes_to_dataframe()` → `filter_recent_posts()` → `save_output(..., output_dir=RAW_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (always) → `build_complete_fn()` → `analyze_posts()` (if `complete` is not `None`) → `save_output(..., enrichment=enrichment, output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (only if enrichment succeeds) → `send_notification()` → `_write_run_summary()` (always, writes `data/logs/YYYY-MM-DD.json`). Exits with code 1 on fetch errors. LLM failures are caught and logged as warnings, while the raw file remains intact. Email send errors are also caught and logged as warnings. Run `LOG_LEVEL` env var controls log verbosity (defaults to `INFO`).
 
 ---
 

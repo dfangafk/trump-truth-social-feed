@@ -42,6 +42,7 @@ def _call_llm_api(prompt: str) -> str:
                 response_format={"type": "json_object"},
                 num_retries=3,
             )
+            logger.info("LLM call succeeded with model: %s", m)
             return response.choices[0].message.content
         except Exception as exc:
             logger.warning("Model %s failed after retries: %s", m, exc)
