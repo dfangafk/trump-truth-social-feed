@@ -86,4 +86,7 @@ def save_output(
     with open(path, "w") as f:
         json.dump(result, f, indent=2, ensure_ascii=False, default=str)
 
-    logger.info("Saved output: %s (%d new posts)", path.name, len(new_posts))
+    if len(new_posts) == 0:
+        logger.info("No new posts — writing empty output to %s", path.name)
+    else:
+        logger.info("Saved output: %s (%d new posts)", path.name, len(new_posts))

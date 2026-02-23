@@ -23,6 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent  # repo root
 DATA_DIR = BASE_DIR / "data"
 RAW_OUTPUT_DIR = DATA_DIR / "raw"
 ENRICHED_OUTPUT_DIR = DATA_DIR / "enriched"
+LOGS_OUTPUT_DIR = DATA_DIR / "logs"
 
 # LLM configuration — override via .env or environment variables.
 LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "auto")
@@ -66,3 +67,8 @@ def raw_output_path(d: date) -> Path:
 def enriched_output_path(d: date) -> Path:
     """Return path to the enriched output JSON file for a given date."""
     return ENRICHED_OUTPUT_DIR / f"{d.isoformat()}.json"
+
+
+def log_output_path(d: date) -> Path:
+    """Return path to the run log JSON file for a given date."""
+    return LOGS_OUTPUT_DIR / f"{d.isoformat()}.json"

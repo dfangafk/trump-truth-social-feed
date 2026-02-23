@@ -33,15 +33,19 @@ def send_notification(
     reference_time: pd.Timestamp,
     new_posts: list[dict],
     enrichment: EnrichResult | None,
-) -> None:
+) -> bool:
     """Send daily digest email after pipeline completion.
 
     Skips silently if SENDER_GMAIL, GMAIL_APP_PASSWORD, or RECEIVER_EMAIL are not set.
     Catches and logs all exceptions to avoid failing the pipeline.
+
+    Returns:
+        True if the email was sent successfully or skipped intentionally (no credentials).
+        False if credentials are present but the send attempt raised an exception.
     """
     if not (SENDER_GMAIL and GMAIL_APP_PASSWORD and RECEIVER_EMAIL):
         logger.info("Email notification skipped (SENDER_GMAIL/GMAIL_APP_PASSWORD/RECEIVER_EMAIL not set)")
-        return
+        return True
 
     date_str = reference_time.date().isoformat()
     post_count = len(new_posts)
@@ -64,8 +68,10 @@ def send_notification(
             server.login(SENDER_GMAIL, GMAIL_APP_PASSWORD)
             server.send_message(msg)
         logger.info("Notification email sent to %s", RECEIVER_EMAIL)
+        return True
     except Exception:
         logger.warning("Failed to send notification email", exc_info=True)
+        return False
 
 
 def _build_template_context(
