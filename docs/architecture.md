@@ -42,8 +42,8 @@ trump-truth-social-feed/
 │                     (CLI entry point)                        │
 │                                                              │
 │  main() runs:                                                │
-│    1. raw, fmt = download_archive()                          │
-│    2. df = bytes_to_dataframe(raw, fmt)                      │
+│    1. raw = download_archive()                               │
+│    2. df = bytes_to_dataframe(raw)                           │
 │    3. new_posts_df = filter_recent_posts(df)                 │
 │    4. save_output(..., output_dir=RAW_OUTPUT_DIR, output_name="YYYY-MM-DD.json") [always] │
 │    5. complete = build_complete_fn()          [from llm.py]  │
@@ -75,7 +75,7 @@ trump-truth-social-feed/
 ┌──────────────────────┐  ┌─────────────────────────────────┐
 │       export.py      │  │           config.py              │
 │                      │  │                                  │
-│ _post_to_dict()      │  │ ARCHIVE_URL_PARQUET/JSON         │
+│ _post_to_dict()      │  │ ARCHIVE_URL_JSON                 │
 │   ↓                  │  │ TRUTH_SOCIAL_PROFILE_URL         │
 │ save_output()        │  │ RAW_OUTPUT_DIR, ENRICHED_OUTPUT_DIR │
 │                      │  │ CATEGORIES, CATEGORY_LINES       │
@@ -86,10 +86,10 @@ trump-truth-social-feed/
 ### Data Flow
 
 ```
-CNN Archive (Parquet or JSON)
+CNN Archive (JSON)
       │
       ▼
-download_archive()          ← tries Parquet first, falls back to JSON
+download_archive()          ← HTTP GET, returns raw bytes
       │
       ▼
 bytes_to_dataframe()        ← normalizes IDs to str, sorts by ID
@@ -126,14 +126,13 @@ _write_run_summary()        ← [always] write run log to data/logs/YYYY-MM-DD.j
 
 | Export                    | Description                              |
 |---------------------------|------------------------------------------|
-| `ARCHIVE_URL_PARQUET`     | Primary CNN archive URL (Parquet format) |
-| `ARCHIVE_URL_JSON`        | Fallback CNN archive URL (JSON format)   |
+| `ARCHIVE_URL_JSON`        | CNN archive URL (JSON format)            |
 | `TRUTH_SOCIAL_PROFILE_URL`| Truth Social profile URL                 |
 | `BASE_DIR`                | Repository root                          |
 | `RAW_OUTPUT_DIR`          | `data/raw/`                              |
 | `ENRICHED_OUTPUT_DIR`     | `data/enriched/`                         |
 | `LLM_PROVIDER`            | Dotenv/env-backed provider selector (`auto` default) |
-| `LLM_MODEL`               | Dotenv/env-backed API model string (or `None`) |
+| `LLM_MODELS`              | Dotenv/env-backed JSON array of models to try in order (e.g. `'["gemini/gemini-2.5-flash"]'`); empty = no API enrichment |
 | `SENDER_GMAIL`            | Dotenv/env-backed Gmail sender address — must be `@gmail.com` (empty = notify disabled) |
 | `GMAIL_APP_PASSWORD`      | Dotenv/env-backed Gmail App Password (16-char) |
 | `RECEIVER_EMAIL`          | Dotenv/env-backed recipient address (any provider) |
@@ -151,7 +150,7 @@ _write_run_summary()        ← [always] write run log to data/logs/YYYY-MM-DD.j
 
 | Function                | Role                                            |
 |-------------------------|-------------------------------------------------|
-| `download_archive(url)` | HTTP GET with User-Agent; auto-fallback to JSON |
+| `download_archive()` | HTTP GET with User-Agent; returns raw bytes     |
 | `bytes_to_dataframe()`  | Parse bytes → DataFrame; normalize `id` to str  |
 | `filter_recent_posts()` | Filter DataFrame by `created_at` within window  |
 
@@ -188,12 +187,12 @@ The `complete` callable is injected by `pipeline.py` (obtained from `llm.build_c
 
 | Export                  | Role                                            |
 |-------------------------|-------------------------------------------------|
-| `build_complete_fn()`   | Provider selection via `LLM_PROVIDER` (`api`, `claude_code_cli`, `codex_cli`, `auto`); `auto` resolution: `_call_llm_api` if `LLM_MODEL` set, else `_call_claude_cli` if `claude` on PATH, else `_call_codex_cli` if `codex` on PATH, else `None` |
+| `build_complete_fn()`   | Provider selection via `LLM_PROVIDER` (`api`, `claude_code_cli`, `codex_cli`, `auto`); `auto` resolution: `_call_llm_api` if `LLM_MODELS` set, else `_call_claude_cli` if `claude` on PATH, else `_call_codex_cli` if `codex` on PATH, else `None` |
 | `_call_llm_api(prompt)` | Calls `litellm.completion(...)` with `response_format={"type":"json_object"}` and returns `response.choices[0].message.content` |
 | `_call_claude_cli(prompt)` | Invokes `claude -p` headless CLI with `--output-format json` + `--json-schema`; returns `structured_output` as JSON string |
 | `_call_codex_cli(prompt)` | Invokes `codex exec` headless CLI with `--ephemeral`, `--full-auto`, and `--output-schema`; returns stdout JSON string |
 
-`LLM_PROVIDER` controls which provider is used: `api`, `claude_code_cli`, `codex_cli`, or `auto` (default). `llm.py` reads `LLM_PROVIDER` and `LLM_MODEL` from `config.py`, where they are loaded from `.env`/environment at startup. `llm.py` imports `ENRICHMENT_SCHEMA` from `analyze.py` (domain knowledge co-located with `_PROMPT_TEMPLATE`). In `api` mode, `LLM_MODEL` must be set (e.g. `anthropic/claude-opus-4-6` or `openai/gpt-4o`) and LiteLLM reads credentials from environment variables such as `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. `claude_code_cli` and `codex_cli` target their CLIs (`claude -p` and `codex exec`) in headless/non-interactive operation, intended for local testing. In `auto`, selection falls back API → Claude CLI → Codex CLI. If the requested provider is unavailable, `build_complete_fn()` returns `None` and enrichment is skipped.
+`LLM_PROVIDER` controls which provider is used: `api`, `claude_code_cli`, `codex_cli`, or `auto` (default). `llm.py` reads `LLM_PROVIDER` and `LLM_MODELS` from `config.py`, where they are loaded from `.env`/environment at startup. `llm.py` imports `ENRICHMENT_SCHEMA` from `analyze.py` (domain knowledge co-located with `_PROMPT_TEMPLATE`). In `api` mode, `LLM_MODELS` must be set (e.g. `'["gemini/gemini-2.5-flash","openai/gpt-4o"]'`) and models are tried in order; LiteLLM reads credentials from environment variables such as `GEMINI_API_KEY` and `OPENAI_API_KEY`. `claude_code_cli` and `codex_cli` target their CLIs (`claude -p` and `codex exec`) in headless/non-interactive operation, intended for local testing. In `auto`, selection falls back API → Claude CLI → Codex CLI. If the requested provider is unavailable, `build_complete_fn()` returns `None` and enrichment is skipped.
 
 ### `notify.py` — Email Notification
 
@@ -220,7 +219,6 @@ Calls `download_archive()` → `bytes_to_dataframe()` → `filter_recent_posts()
 | `litellm`  | Unified LLM API client across providers |
 | `pandas`   | DataFrame operations       |
 | `python-dotenv` | Load local `.env` configuration at startup |
-| `pyarrow`  | Parquet read/write support |
 | `requests` | HTTP archive downloads     |
 
 LLM enrichment can be forced with `LLM_PROVIDER` (`api`, `claude_code_cli`, `codex_cli`) or left as `auto` fallback. API mode uses LiteLLM; CLI modes use `claude` or `codex` via `subprocess` for local testing.
@@ -231,7 +229,6 @@ Dev: `pytest`, `pytest-mock`
 
 ## Resilience / Edge Cases
 
-- **Format fallback**: Parquet download fails → retries with JSON URL.
 - **NaN handling**: Missing count columns default to `0` via safe int parsing.
 - **Media normalization**: Accepts both Python lists and JSON-encoded strings.
 - **No posts in window**: If no posts are within the 24h window, an empty output is written.
@@ -294,7 +291,7 @@ pytest
 | `test_analyze.py`  | `analyze_posts`: success path, empty posts, malformed JSON, missing keys, propagated exceptions; `_is_reblog`/`_has_content` helpers; pre-filter exclusion of reblogs/empty posts from LLM; all-non-substantive skips LLM |
 | `test_config.py`   | Path formatting, zero-padded dates                                |
 | `test_export.py`   | `_post_to_dict` (basic fields, list media, JSON-string media, NaN counts, None media), `save_output` (JSON structure, zero-post output, per-post enrichment categories) |
-| `test_fetch.py`    | Download (success + fallback + failure), parsing (Parquet + JSON), ID normalization, sorting, `filter_recent_posts` (recent/none/all/custom window, defaults to now) |
+| `test_fetch.py`    | Download (success + failure), parsing (JSON), ID normalization, sorting, `filter_recent_posts` (recent/none/all/custom window, defaults to now) |
 | `test_llm.py`      | `build_complete_fn`: explicit `LLM_PROVIDER` selection (`api`/`claude_code_cli`/`codex_cli`/`auto`), invalid provider handling, availability checks, and None fallback; `_call_llm_api`: success + propagated provider errors; `_call_claude_cli`: success path, non-zero exit code, missing structured_output key; `_call_codex_cli`: success + non-zero exit |
 | `test_pipeline.py` | Two-phase save behavior (no LLM, LLM success, LLM failure) and fetch failure (exit 1) |
 
@@ -303,7 +300,6 @@ pytest
 | Fixture        | Description                                        |
 |----------------|----------------------------------------------------|
 | `sample_df`    | 3-row DataFrame with realistic schema (IDs 100–300) |
-| `parquet_bytes`| Binary Parquet of `sample_df`                      |
 | `json_bytes`   | Binary JSON of `sample_df`                         |
 
 All fetch tests mock HTTP calls; filter tests use timestamps relative to a fixed reference time.
