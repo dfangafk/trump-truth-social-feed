@@ -4,6 +4,12 @@ import pandas as pd
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def no_file_logging(mocker):
+    """Prevent pipeline tests from writing real log files to disk."""
+    mocker.patch("ttsfeed.pipeline._add_file_handler")
+
+
 @pytest.fixture
 def sample_df():
     """Minimal DataFrame mimicking the real archive schema."""
