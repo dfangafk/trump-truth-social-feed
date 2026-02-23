@@ -10,7 +10,7 @@ get_env_var() {
 echo "Syncing .env → GitHub repo secrets and variables..."
 
 # --- Secrets (sensitive keys) ---
-for secret in OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY; do
+for secret in OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY SENDER_GMAIL GMAIL_APP_PASSWORD RECEIVER_EMAIL; do
   value=$(get_env_var "$secret")
   if [[ -n "$value" ]]; then
     gh secret set "$secret" --body "$value"
@@ -21,7 +21,7 @@ for secret in OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY; do
 done
 
 # --- Variables (non-sensitive config) ---
-for var in LLM_PROVIDER LLM_MODEL; do
+for var in LLM_PROVIDER LLM_MODELS; do
   value=$(get_env_var "$var")
   if [[ -n "$value" ]]; then
     gh variable set "$var" --body "$value"
