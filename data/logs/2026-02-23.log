@@ -1,0 +1,5 @@
+2026-02-23 13:25:01,416 [INFO] ttsfeed.export: Saved output: 2026-02-23.json (13 new posts)
+2026-02-23 13:25:01,417 [WARNING] ttsfeed.llm: Requested enrichment provider 'api' is not available
+2026-02-23 13:25:01,417 [INFO] __main__: No LLM provider available; skipping enrichment
+2026-02-23 13:25:01,417 [INFO] __main__: Pipeline complete in 0.6 seconds
+2026-02-23 13:25:02,928 [INFO] ttsfeed.notify: Notification email sent to danielfangyg@gmail.com
