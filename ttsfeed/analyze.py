@@ -124,6 +124,7 @@ def analyze_posts(posts: list[dict], complete: Callable[[str], str]) -> EnrichRe
         category_lines=POST_TAG_LINES,
     )
 
+    logger.debug("LLM prompt:\n%s", prompt)
     raw = complete(prompt)
     logger.debug("LLM raw response: %s", raw)
 
