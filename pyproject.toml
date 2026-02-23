@@ -1,9 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "trump-truth-social-feed"
 version = "0.1.0"
 description = "Daily LLM enrichment pipeline for Trump's Truth Social posts"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "dfangafk" },
+]
 requires-python = ">=3.12"
+keywords = ["trump", "truth-social", "llm", "pipeline"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "jinja2>=3.0",
     "litellm>=1.0",
@@ -11,6 +27,12 @@ dependencies = [
     "python-dotenv>=1.0",
     "requests>=2.32.5",
 ]
+
+[project.urls]
+Repository = "https://github.com/dfangafk/trump-truth-social-feed"
+
+[project.scripts]
+ttsfeed = "ttsfeed.pipeline:main"
 
 [dependency-groups]
 dev = [
@@ -21,5 +43,17 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
-[project.scripts]
-ttsfeed = "ttsfeed.pipeline:main"
+[tool.hatch.build.targets.wheel]
+packages = ["ttsfeed"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "ttsfeed/",
+    "tests/",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+
+[tool.uv]
+package = true
