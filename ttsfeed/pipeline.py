@@ -53,7 +53,7 @@ def main() -> None:
         output_dir=raw_path.parent,
         output_name=raw_path.name,
     )
-    logger.info("Raw output: %s", raw_path)
+
 
     new_posts = [_post_to_dict(row) for _, row in new_posts_df.iterrows()]
     enrichment = None
@@ -74,7 +74,7 @@ def main() -> None:
                 output_dir=enriched_path.parent,
                 output_name=enriched_path.name,
             )
-            logger.info("Enriched output: %s", enriched_path)
+
         except Exception:
             logger.warning("LLM enrichment failed; skipping", exc_info=True)
     else:
