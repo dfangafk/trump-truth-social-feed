@@ -70,5 +70,5 @@ def enriched_output_path(d: date) -> Path:
 
 
 def log_output_path(d: date) -> Path:
-    """Return path to the run log JSON file for a given date."""
-    return LOGS_OUTPUT_DIR / f"{d.isoformat()}.json"
+    """Return path to the run log file for a given date."""
+    return LOGS_OUTPUT_DIR / f"{d.isoformat()}.log"
