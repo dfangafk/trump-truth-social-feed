@@ -19,6 +19,15 @@ logging.basicConfig(level=_log_level, format=_LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 
+def _add_file_handler(run_date) -> None:
+    """Attach a date-stamped FileHandler to the root logger."""
+    LOGS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    log_file = LOGS_OUTPUT_DIR / f"{run_date.isoformat()}.log"
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    file_handler.setFormatter(logging.Formatter(_LOG_FORMAT))
+    logging.getLogger().addHandler(file_handler)
+
+
 def main() -> None:
     t0 = pd.Timestamp.now("UTC")
     logger.info("Pipeline start")
@@ -39,12 +48,7 @@ def main() -> None:
     enriched_path = enriched_output_path(run_date)
     logger.info("Run date: %s", run_date)
 
-    # Add a file handler so all log output is also written to data/logs/YYYY-MM-DD.log
-    LOGS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    log_file = LOGS_OUTPUT_DIR / f"{run_date.isoformat()}.log"
-    file_handler = logging.FileHandler(log_file, encoding="utf-8")
-    file_handler.setFormatter(logging.Formatter(_LOG_FORMAT))
-    logging.getLogger().addHandler(file_handler)
+    _add_file_handler(run_date)
 
     save_output(
         new_posts_df,
