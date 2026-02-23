@@ -26,6 +26,7 @@ def test_main_no_llm_saves_once(mocker):
     mocker.patch("ttsfeed.pipeline.pd.Timestamp.now", return_value=mock_now)
     mocker.patch("ttsfeed.pipeline.build_complete_fn", return_value=None)
     mocker.patch("ttsfeed.pipeline.send_notification")
+    mocker.patch("ttsfeed.pipeline._write_run_summary")
 
     main()
 
@@ -54,6 +55,7 @@ def test_main_with_llm_saves_twice(mocker):
     mock_analyze = mocker.patch("ttsfeed.pipeline.analyze_posts", return_value=enrichment)
     mock_save = mocker.patch("ttsfeed.pipeline.save_output")
     mocker.patch("ttsfeed.pipeline.send_notification")
+    mocker.patch("ttsfeed.pipeline._write_run_summary")
 
     main()
 
@@ -97,6 +99,7 @@ def test_main_llm_failure_saves_once(mocker):
     )
     mock_save = mocker.patch("ttsfeed.pipeline.save_output")
     mocker.patch("ttsfeed.pipeline.send_notification")
+    mocker.patch("ttsfeed.pipeline._write_run_summary")
 
     main()
 
