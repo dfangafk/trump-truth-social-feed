@@ -1,0 +1,5 @@
+2026-02-24 01:35:48,125 [INFO] ttsfeed.export: Saved output: 2026-02-24.json (24 new posts)
+2026-02-24 01:35:48,127 [INFO] ttsfeed.llm: No enrichment provider available
+2026-02-24 01:35:48,127 [INFO] __main__: No LLM provider available; skipping enrichment
+2026-02-24 01:35:48,127 [INFO] __main__: Pipeline complete in 0.4 seconds
+2026-02-24 01:35:49,194 [INFO] ttsfeed.notify: Notification email sent to danielfangyg@gmail.com
