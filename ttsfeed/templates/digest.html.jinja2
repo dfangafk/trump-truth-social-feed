@@ -25,6 +25,11 @@
     .view-link a { color: #b22234; text-decoration: none; }
     .footer { background: #f0f0f0; padding: 20px 32px; font-size: 12px; color: #888; text-align: center; line-height: 1.6; }
     .footer a { color: #b22234; }
+    .media-image { display:block; max-width:100%; border-radius:4px; margin:8px 0; }
+    .media-video { margin:8px 0; }
+    .media-video a { display:inline-flex; align-items:center; gap:6px; background:#f5f5f5; border:1px solid #ddd; color:#444; font-size:13px; padding:7px 14px; border-radius:4px; text-decoration:none; font-family:Georgia,serif; }
+    .media-video a:hover { background:#ebebeb; }
+    .media-video .play-icon { font-size:11px; color:#888; }
   </style>
 </head>
 <body>
@@ -61,9 +66,15 @@
           {% for cat in post.categories %}<span class="pill">{{ cat }}</span>{% endfor %}
         </div>
         {% endif %}
-        {% if post.media %}
-        <div class="media-links" style="margin-bottom:8px;">
-          {% for url in post.media %}<div><a href="{{ url }}" style="color:#555;font-size:13px;">{{ url }}</a></div>{% endfor %}
+        {% if post.media_items %}
+        <div class="media-block">
+          {% for item in post.media_items %}
+            {% if item.type == "image" %}
+              <img class="media-image" src="{{ item.url }}" alt="[Image — enable image loading to view]">
+            {% else %}
+              <div class="media-video"><a href="{{ item.url }}"><span class="play-icon">&#9654;</span>&nbsp; Video from Truth Social</a></div>
+            {% endif %}
+          {% endfor %}
         </div>
         {% endif %}
         <div class="view-link"><a href="{{ post.url }}">View on Truth Social &rarr;</a></div>

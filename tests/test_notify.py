@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from ttsfeed.analyze import EnrichResult
-from ttsfeed.notify import _build_template_context, _render_text, _to_et_display, send_notification
+from ttsfeed.notify import _build_template_context, _media_type, _render_text, _to_et_display, send_notification
 
 
 REFERENCE_TIME = pd.Timestamp("2026-02-21T14:00:00Z")
@@ -163,3 +163,30 @@ def test_rendered_text_contains_urls():
     body = _render_text(ctx)
     assert "https://truthsocial.com/@realDonaldTrump/1" in body
     assert "https://truthsocial.com/@realDonaldTrump/2" in body
+
+
+def test_media_type_classifies_mp4_as_video():
+    assert _media_type("https://example.com/foo.mp4") == "video"
+
+
+def test_media_type_classifies_jpg_as_image():
+    assert _media_type("https://example.com/foo.jpg") == "image"
+
+
+def test_build_template_context_populates_media_items():
+    """Posts with media list get a media_items list with correct type/url dicts."""
+    posts = [
+        {
+            "id": "99",
+            "created_at": "2026-02-21T14:00:00Z",
+            "content": "post with media",
+            "url": "https://truthsocial.com/@realDonaldTrump/99",
+            "media": ["https://cdn.example.com/a.jpg", "https://cdn.example.com/b.mp4"],
+        }
+    ]
+    ctx = _build_template_context("2026-02-21", posts, None)
+    post = ctx["data"]["new_posts"][0]
+    assert post["media_items"] == [
+        {"url": "https://cdn.example.com/a.jpg", "type": "image"},
+        {"url": "https://cdn.example.com/b.mp4", "type": "video"},
+    ]
