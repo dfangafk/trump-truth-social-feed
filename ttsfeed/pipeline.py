@@ -30,6 +30,8 @@ def _add_file_handler(run_date) -> None:
 
 def main() -> None:
     t0 = pd.Timestamp.now("UTC")
+    run_date = t0.date()
+    _add_file_handler(run_date)
     logger.info("Pipeline start")
 
     try:
@@ -43,12 +45,9 @@ def main() -> None:
     new_posts_df = filter_recent_posts(df)
     logger.info("%d new posts found", len(new_posts_df))
     reference_time = pd.Timestamp.now("UTC")
-    run_date = reference_time.date()
     raw_path = raw_output_path(run_date)
     enriched_path = enriched_output_path(run_date)
     logger.info("Run date: %s", run_date)
-
-    _add_file_handler(run_date)
 
     save_output(
         new_posts_df,
