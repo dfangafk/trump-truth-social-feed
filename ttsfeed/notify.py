@@ -43,7 +43,7 @@ def send_notification(
         logger.info("Email notification skipped (SENDER_GMAIL/GMAIL_APP_PASSWORD/RECEIVER_EMAIL not set)")
         return
 
-    date_str = reference_time.date().isoformat()
+    date_str = reference_time.astimezone(_ET).date().isoformat()
     post_count = len(new_posts)
 
     subject = f"Trump Truth Social \u2014 {date_str} ({post_count} new posts)"
