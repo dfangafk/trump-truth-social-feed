@@ -5,32 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trump Truth Social Feed — {{ date }}</title>
   <style>
-    body { font-family: Georgia, serif; background: #f5f5f5; margin: 0; padding: 0; }
-    .wrapper { max-width: 620px; margin: 0 auto; background: #ffffff; }
-    .header { background: #b22234; color: #ffffff; padding: 24px 32px; text-align: center; }
-    .header h1 { margin: 0; font-size: 24px; letter-spacing: 0.5px; }
-    .header p { margin: 4px 0 0; font-size: 14px; opacity: 0.85; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: #FFFFFF; margin: 0; padding: 0; color: #0F172A; }
+    .wrapper { max-width: 620px; margin: 0 auto; background: #FFFFFF; }
+    .header { border-bottom: 2px solid #E2E8F0; padding: 28px 32px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 22px; letter-spacing: -0.3px; color: #0F172A; font-weight: 700; }
+    .header p { margin: 6px 0 0; font-size: 13px; color: #475569; letter-spacing: 0.3px; text-transform: uppercase; }
     .body { padding: 24px 32px; }
-    .greeting { font-size: 16px; margin-bottom: 16px; }
-    .summary-box { background: #fff8e1; border-left: 4px solid #f5a623; padding: 16px 20px; margin-bottom: 24px; border-radius: 2px; }
-    .summary-box .count { font-size: 13px; color: #888; margin-bottom: 6px; }
-    .summary-box p { margin: 0; font-size: 15px; line-height: 1.5; }
-    .post { border-bottom: 1px solid #e8e8e8; padding: 16px 0; }
+    .greeting { font-size: 16px; margin-bottom: 16px; color: #0F172A; }
+    .summary-box { background: #F8FAFC; border-left: 3px solid #2563EB; padding: 16px 20px; margin-bottom: 24px; border-radius: 2px; }
+    .summary-box .count { font-size: 12px; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .summary-box p { margin: 0; font-size: 15px; line-height: 1.5; color: #0F172A; }
+    .post { border-bottom: 1px solid #E2E8F0; padding: 16px 0; }
     .post:last-child { border-bottom: none; }
     .post-header { display: table; width: 100%; margin-bottom: 8px; }
-    .post-meta { display: table-cell; font-size: 12px; color: #999; }
+    .post-meta { display: table-cell; font-size: 12px; color: #475569; }
     .post-link { display: table-cell; text-align: right; font-size: 12px; white-space: nowrap; }
-    .post-link a { color: #999; text-decoration: none; border-bottom: 1px solid #ddd; }
-    .post-content { font-size: 15px; line-height: 1.6; margin: 0 0 10px; }
+    .post-link a { color: #2563EB; text-decoration: none; border-bottom: 1px solid #BFDBFE; }
+    .post-content { font-size: 15px; line-height: 1.6; margin: 0 0 10px; color: #0F172A; }
     .categories { margin-top: 10px; }
-    .pill { display: inline-block; background: #f0f0f0; color: #666; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-right: 4px; margin-bottom: 4px; }
-    .footer { background: #f0f0f0; padding: 20px 32px; font-size: 12px; color: #888; text-align: center; line-height: 1.6; }
-    .footer a { color: #b22234; }
+    .pill { display: inline-block; background: #F1F5F9; color: #334155; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-right: 4px; margin-bottom: 4px; border: 1px solid #E2E8F0; }
+    .footer { border-top: 1px solid #E2E8F0; padding: 20px 32px; font-size: 12px; color: #475569; text-align: center; line-height: 1.6; }
+    .footer a { color: #2563EB; }
     .media-image { display:block; max-width:100%; border-radius:4px; margin:8px 0; }
     .media-video { margin:8px 0; }
-    .media-video a { display:inline-flex; align-items:center; gap:6px; background:#f5f5f5; border:1px solid #ddd; color:#444; font-size:13px; padding:7px 14px; border-radius:4px; text-decoration:none; font-family:Georgia,serif; }
-    .media-video a:hover { background:#ebebeb; }
-    .media-video .play-icon { font-size:11px; color:#888; }
+    .media-video a { display:inline-flex; align-items:center; gap:6px; background:#F8FAFC; border:1px solid #E2E8F0; color:#1D4ED8; font-size:13px; padding:7px 14px; border-radius:4px; text-decoration:none; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+    .media-video a:hover { background:#EFF6FF; }
+    .media-video .play-icon { font-size:11px; color:#2563EB; }
   </style>
 </head>
 <body>
@@ -38,7 +38,7 @@
     <!-- Header -->
     <div class="header">
       <h1>Trump Truth Social Feed</h1>
-      <p>{{ date }}</p>
+      <p>Daily Digest &mdash; {{ date }}</p>
     </div>
 
     <div class="body">
