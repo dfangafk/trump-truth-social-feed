@@ -128,6 +128,29 @@ uv run python -m ttsfeed.pipeline
 
 ---
 
+## Install as a Library
+
+To use `ttsfeed` as a dependency in another Python project:
+
+**With pip:**
+```bash
+pip install git+https://github.com/dfangafk/trump-truth-social-feed.git
+```
+
+**With uv:**
+```bash
+uv add git+https://github.com/dfangafk/trump-truth-social-feed.git
+```
+
+Or pin it in `pyproject.toml`:
+```toml
+dependencies = [
+    "trump-truth-social-feed @ git+https://github.com/dfangafk/trump-truth-social-feed.git",
+]
+```
+
+---
+
 ## GitHub Actions
 
 The workflow (`.github/workflows/daily_ingest.yml`) runs daily at **23:30 UTC** and can also be triggered manually via `workflow_dispatch`.
