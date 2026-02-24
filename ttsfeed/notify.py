@@ -21,6 +21,11 @@ _TEMPLATES_DIR = Path(__file__).parent / "templates"
 _ET = ZoneInfo("America/New_York")
 
 
+def _media_type(url: str) -> str:
+    """Return 'video' for .mp4 URLs, 'image' for everything else."""
+    return "video" if url.lower().endswith(".mp4") else "image"
+
+
 def _to_et_display(created_at: str) -> str:
     """Convert UTC ISO timestamp to Eastern Time display string like 'Feb 21, 2026, 9:32 AM'."""
     dt = datetime.fromisoformat(created_at).astimezone(_ET)
@@ -84,6 +89,7 @@ def _build_template_context(
                 else []
             ),
             "created_at_et": _to_et_display(post.get("created_at", "")),
+            "media_items": [{"url": u, "type": _media_type(u)} for u in post.get("media", [])],
         }
         for post in sorted_posts
     ]
