@@ -3,3 +3,16 @@
 2026-02-24 01:35:48,127 [INFO] __main__: No LLM provider available; skipping enrichment
 2026-02-24 01:35:48,127 [INFO] __main__: Pipeline complete in 0.4 seconds
 2026-02-24 01:35:49,194 [INFO] ttsfeed.notify: Notification email sent to danielfangyg@gmail.com
+2026-02-24 01:38:49,601 [INFO] ttsfeed.export: Saved output: 2026-02-24.json (24 new posts)
+2026-02-24 01:38:49,603 [INFO] ttsfeed.llm: Selected enrichment provider: API (LLM_MODELS)
+2026-02-24 01:38:49,603 [INFO] ttsfeed.analyze: Analyzing 24 posts (16 substantive)
+2026-02-24 01:38:49,603 [INFO] ttsfeed.llm: Trying LLM model: gemini/gemini-3-flash-preview
+2026-02-24 01:38:49,614 [INFO] LiteLLM: 
+LiteLLM completion() model= gemini-3-flash-preview; provider = gemini
+2026-02-24 01:39:20,610 [INFO] LiteLLM: Wrapper: Completed Call, calling success_handler
+2026-02-24 01:39:20,612 [INFO] ttsfeed.llm: LLM call succeeded with model: gemini/gemini-3-flash-preview
+2026-02-24 01:39:20,612 [INFO] ttsfeed.analyze: LLM response parsed: 16 categories, summary 352 chars
+2026-02-24 01:39:20,612 [INFO] __main__: Enrichment complete: 24 categorized posts
+2026-02-24 01:39:20,615 [INFO] ttsfeed.export: Saved output: 2026-02-24.json (24 new posts)
+2026-02-24 01:39:20,615 [INFO] __main__: Pipeline complete in 31.5 seconds
+2026-02-24 01:39:21,561 [INFO] ttsfeed.notify: Notification email sent to danielfangyg@gmail.com
