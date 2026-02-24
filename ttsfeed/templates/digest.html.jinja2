@@ -17,12 +17,13 @@
     .summary-box p { margin: 0; font-size: 15px; line-height: 1.5; }
     .post { border-bottom: 1px solid #e8e8e8; padding: 16px 0; }
     .post:last-child { border-bottom: none; }
-    .post-meta { font-size: 12px; color: #999; margin-bottom: 6px; }
+    .post-header { display: table; width: 100%; margin-bottom: 8px; }
+    .post-meta { display: table-cell; font-size: 12px; color: #999; }
+    .post-link { display: table-cell; text-align: right; font-size: 12px; white-space: nowrap; }
+    .post-link a { color: #999; text-decoration: none; border-bottom: 1px solid #ddd; }
     .post-content { font-size: 15px; line-height: 1.6; margin: 0 0 10px; }
-    .categories { margin-bottom: 8px; }
-    .pill { display: inline-block; background: #e8f0fe; color: #1a73e8; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-right: 4px; }
-    .view-link { font-size: 13px; }
-    .view-link a { color: #b22234; text-decoration: none; }
+    .categories { margin-top: 10px; }
+    .pill { display: inline-block; background: #f0f0f0; color: #666; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-right: 4px; margin-bottom: 4px; }
     .footer { background: #f0f0f0; padding: 20px 32px; font-size: 12px; color: #888; text-align: center; line-height: 1.6; }
     .footer a { color: #b22234; }
     .media-image { display:block; max-width:100%; border-radius:4px; margin:8px 0; }
@@ -53,7 +54,10 @@
       <!-- Posts -->
       {% for post in data.new_posts %}
       <div class="post">
-        <div class="post-meta">{{ post.created_at_et }}</div>
+        <div class="post-header">
+          <span class="post-meta">{{ post.created_at_et }}</span>
+          <span class="post-link"><a href="{{ post.url }}">View on Truth Social &rarr;</a></span>
+        </div>
         <p class="post-content">
           {% if post.content | length > 800 %}
             {{ post.content[:800] }}&hellip;
@@ -61,11 +65,6 @@
             {{ post.content }}
           {% endif %}
         </p>
-        {% if post.categories %}
-        <div class="categories">
-          {% for cat in post.categories %}<span class="pill">{{ cat }}</span>{% endfor %}
-        </div>
-        {% endif %}
         {% if post.media_items %}
         <div class="media-block">
           {% for item in post.media_items %}
@@ -77,7 +76,11 @@
           {% endfor %}
         </div>
         {% endif %}
-        <div class="view-link"><a href="{{ post.url }}">View on Truth Social &rarr;</a></div>
+        {% if post.categories %}
+        <div class="categories">
+          {% for cat in post.categories %}<span class="pill">{{ cat }}</span>{% endfor %}
+        </div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
