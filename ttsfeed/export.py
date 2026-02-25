@@ -20,7 +20,7 @@ def _safe_int(val, default: int = 0) -> int:
         return default
 
 
-def _post_to_dict(row: pd.Series) -> dict:
+def post_to_dict(row: pd.Series) -> dict:
     """Convert a DataFrame row to the output dict format."""
     media: list[str] = row.get("media") or []
 
@@ -56,7 +56,7 @@ def save_output(
     target_dir.mkdir(parents=True, exist_ok=True)
 
     sorted_df = new_posts_df.sort_values("created_at", ascending=False)
-    new_posts = [_post_to_dict(row) for _, row in sorted_df.iterrows()]
+    new_posts = [post_to_dict(row) for _, row in sorted_df.iterrows()]
 
     summary: dict = {
         "total_posts_in_archive": total_archive,

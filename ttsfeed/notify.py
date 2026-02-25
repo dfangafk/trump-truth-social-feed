@@ -52,9 +52,9 @@ def send_notification(
     post_count = len(new_posts)
 
     subject = f"Trump Truth Social \u2014 {date_str} ({post_count} new posts)"
-    ctx = _build_template_context(date_str, new_posts, enrichment)
-    text_body = _render_text(ctx)
-    html_body = _render_html(ctx)
+    ctx = build_template_context(date_str, new_posts, enrichment)
+    text_body = render_text(ctx)
+    html_body = render_html(ctx)
 
     msg = MIMEMultipart("alternative")
     msg["From"] = SENDER_GMAIL
@@ -73,7 +73,7 @@ def send_notification(
         logger.warning("Failed to send notification email", exc_info=True)
 
 
-def _build_template_context(
+def build_template_context(
     date_str: str,
     new_posts: list[dict],
     enrichment: EnrichResult | None,
@@ -112,13 +112,13 @@ def _build_template_context(
     }
 
 
-def _render_text(ctx: dict) -> str:
+def render_text(ctx: dict) -> str:
     """Render the plain-text template with the given context."""
     env = Environment(loader=FileSystemLoader(_TEMPLATES_DIR), autoescape=False)
     return env.get_template("digest.txt.jinja2").render(**ctx)
 
 
-def _render_html(ctx: dict) -> str:
+def render_html(ctx: dict) -> str:
     """Render the HTML template with the given context."""
     env = Environment(loader=FileSystemLoader(_TEMPLATES_DIR), autoescape=True)
     return env.get_template("digest.html.jinja2").render(**ctx)
