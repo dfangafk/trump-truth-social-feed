@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from ttsfeed.analyze import EnrichResult
-from ttsfeed.notify import _build_template_context, _media_type, _render_text, _to_et_display, send_notification
+from ttsfeed.notify import build_template_context, _media_type, render_text, _to_et_display, send_notification
 
 
 REFERENCE_TIME = pd.Timestamp("2026-02-21T14:00:00Z")
@@ -122,7 +122,7 @@ def test_send_notification_logs_warning_on_smtp_error(mocker):
 
 def test_template_context_no_enrichment():
     """Context without enrichment has 'Enrichment not available.' and empty categories."""
-    ctx = _build_template_context("2026-02-21", SAMPLE_POSTS, None)
+    ctx = build_template_context("2026-02-21", SAMPLE_POSTS, None)
     assert ctx["data"]["summary"]["daily_summary"] == "Enrichment not available."
     assert all(p["categories"] == [] for p in ctx["data"]["new_posts"])
     contents = [p["content"] for p in ctx["data"]["new_posts"]]
@@ -132,7 +132,7 @@ def test_template_context_no_enrichment():
 
 def test_template_context_with_enrichment():
     """Context with enrichment populates summary and per-post categories."""
-    ctx = _build_template_context("2026-02-21", SAMPLE_POSTS, SAMPLE_ENRICHMENT)
+    ctx = build_template_context("2026-02-21", SAMPLE_POSTS, SAMPLE_ENRICHMENT)
     assert ctx["data"]["summary"]["daily_summary"] == "Trump posted about trade and immigration."
     cats_by_id = {p["id"]: p["categories"] for p in ctx["data"]["new_posts"]}
     assert cats_by_id["1"] == ["economy / trade"]
@@ -151,7 +151,7 @@ def test_to_et_display_formats_correctly():
 
 def test_template_context_includes_created_at_et():
     """Each post in context should have a created_at_et field."""
-    ctx = _build_template_context("2026-02-21", SAMPLE_POSTS, None)
+    ctx = build_template_context("2026-02-21", SAMPLE_POSTS, None)
     for post in ctx["data"]["new_posts"]:
         assert "created_at_et" in post
         assert "AM" in post["created_at_et"] or "PM" in post["created_at_et"]
@@ -159,8 +159,8 @@ def test_template_context_includes_created_at_et():
 
 def test_rendered_text_contains_urls():
     """Rendered plain-text body includes URLs for each post."""
-    ctx = _build_template_context("2026-02-21", SAMPLE_POSTS, None)
-    body = _render_text(ctx)
+    ctx = build_template_context("2026-02-21", SAMPLE_POSTS, None)
+    body = render_text(ctx)
     assert "https://truthsocial.com/@realDonaldTrump/1" in body
     assert "https://truthsocial.com/@realDonaldTrump/2" in body
 
@@ -173,7 +173,7 @@ def test_media_type_classifies_jpg_as_image():
     assert _media_type("https://example.com/foo.jpg") == "image"
 
 
-def test_build_template_context_populates_media_items():
+def testbuild_template_context_populates_media_items():
     """Posts with media list get a media_items list with correct type/url dicts."""
     posts = [
         {
@@ -184,7 +184,7 @@ def test_build_template_context_populates_media_items():
             "media": ["https://cdn.example.com/a.jpg", "https://cdn.example.com/b.mp4"],
         }
     ]
-    ctx = _build_template_context("2026-02-21", posts, None)
+    ctx = build_template_context("2026-02-21", posts, None)
     post = ctx["data"]["new_posts"][0]
     assert post["media_items"] == [
         {"url": "https://cdn.example.com/a.jpg", "type": "image"},

@@ -8,7 +8,7 @@ import pandas as pd
 
 from ttsfeed.analyze import analyze_posts
 from ttsfeed.config import LOGS_OUTPUT_DIR, enriched_output_path, raw_output_path
-from ttsfeed.export import _post_to_dict, save_output
+from ttsfeed.export import post_to_dict, save_output
 from ttsfeed.fetch import bytes_to_dataframe, download_archive, filter_recent_posts
 from ttsfeed.llm import build_complete_fn
 from ttsfeed.notify import send_notification
@@ -58,7 +58,7 @@ def main() -> None:
     )
 
 
-    new_posts = [_post_to_dict(row) for _, row in new_posts_df.iterrows()]
+    new_posts = [post_to_dict(row) for _, row in new_posts_df.iterrows()]
     enrichment = None
 
     complete = build_complete_fn()
