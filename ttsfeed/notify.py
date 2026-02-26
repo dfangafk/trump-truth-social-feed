@@ -51,7 +51,7 @@ def send_notification(
     date_str = reference_time.astimezone(_ET).date().isoformat()
     post_count = len(new_posts)
 
-    subject = f"Trump Truth Social \u2014 {date_str} ({post_count} new posts)"
+    subject = f"Trump Truth Social Feed \u2014 {date_str} ({post_count} new posts)"
     ctx = build_template_context(date_str, new_posts, enrichment)
     text_body = render_text(ctx)
     html_body = render_html(ctx)
