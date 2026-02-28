@@ -58,13 +58,7 @@
           <span class="post-meta">{{ post.created_at_et }}</span>
           <span class="post-link"><a href="{{ post.url }}">View on Truth Social &rarr;</a></span>
         </div>
-        <p class="post-content">
-          {% if post.content | length > 800 %}
-            {{ post.content[:800] }}&hellip;
-          {% else %}
-            {{ post.content }}
-          {% endif %}
-        </p>
+        <p class="post-content">{{ post.content }}</p>
         {% if post.media_items %}
         <div class="media-block">
           {% for item in post.media_items %}
