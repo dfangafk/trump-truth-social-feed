@@ -5,7 +5,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from ttsfeed.config import MAX_TAGS_PER_POST, POST_TAGS
+from ttsfeed.config import POST_TAGS
 
 POST_TAG_LINES: str = "\n".join(f"  - {name}: {desc}" for name, desc in POST_TAGS.items())
 
@@ -22,7 +22,7 @@ ENRICHMENT_SCHEMA: str = json.dumps(
                     "type": "object",
                     "properties": {
                         "id": {"type": "string"},
-                        "categories": {"type": "array", "items": {"type": "string"}},
+                        "categories": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 1},
                     },
                     "required": ["id", "categories"],
                 },
@@ -38,7 +38,7 @@ You are analyzing Trump's Truth Social posts for a daily briefing.
 Substantive posts ({n} total):
 {numbered_posts}
 
-Assign each post up to {max_tags} categories from this list. Always assign at least one category; use "Other" if no specific category fits:
+Assign each post exactly one category from this list. Use "Other" if no specific category fits:
 {category_lines}
 
 Respond with valid JSON only, no markdown:
@@ -120,7 +120,6 @@ def analyze_posts(posts: list[dict], complete: Callable[[str], str]) -> EnrichRe
     prompt = _PROMPT_TEMPLATE.format(
         n=len(substantive),
         numbered_posts=numbered_posts,
-        max_tags=MAX_TAGS_PER_POST,
         category_lines=POST_TAG_LINES,
     )
 
