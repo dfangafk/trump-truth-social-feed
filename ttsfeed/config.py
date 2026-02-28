@@ -44,7 +44,6 @@ POST_TAGS: dict[str, str] = {
     "Other": "Fallback when no topical category is a clear fit.",
 }
 
-MAX_TAGS_PER_POST: int = 3
 
 
 # Email notification — override via .env or environment variables.
