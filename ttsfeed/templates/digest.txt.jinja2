@@ -12,7 +12,7 @@ POSTS
 =====================================================
 {% for post in data.new_posts %}
 [{{ loop.index }}] {{ post.created_at_et }}
-{% if post.content | length > 800 %}{{ post.content[:800] }}...{% else %}{{ post.content }}{% endif %}
+{{ post.content }}
 
 {% if post.categories %}Categories: {{ post.categories | join(", ") }}{% endif %}
 {% if post.media_items %}
