@@ -11,7 +11,7 @@ from collections.abc import Callable
 from litellm import completion
 
 from ttsfeed.analyze import ENRICHMENT_SCHEMA
-from ttsfeed.config import LLM_MODELS, LLM_PROVIDER
+from ttsfeed.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -29,18 +29,20 @@ def _call_llm_api(prompt: str) -> str:
     Returns:
         JSON string containing ``summary`` and ``post_categories`` keys.
     """
-    if not LLM_MODELS:
+    if not settings.llm.models:
         raise RuntimeError("LLM_MODELS is required for API provider")
 
+    api_kwargs = dict(settings.llm.api_kwargs)
+
     last_exc: Exception | None = None
-    for m in LLM_MODELS:
+    for m in settings.llm.models:
         try:
             logger.info("Trying LLM model: %s", m)
             response = completion(
                 model=m,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"},
-                num_retries=3,
+                **api_kwargs,
             )
             logger.info("LLM call succeeded with model: %s", m)
             return response.choices[0].message.content
@@ -154,7 +156,7 @@ def build_complete_fn() -> Callable[[str], str] | None:
         (local testing), else ``_call_codex_cli`` if ``codex`` is on PATH
         (local testing), else ``None``.
     """
-    provider = (LLM_PROVIDER or "auto").strip().lower()
+    provider = (settings.llm.provider or "auto").strip().lower()
     if provider not in {"api", "claude_code_cli", "codex_cli", "auto"}:
         logger.warning(
             "Invalid %s value '%s'; expected one of: api, claude_code_cli, codex_cli, auto",
@@ -163,7 +165,7 @@ def build_complete_fn() -> Callable[[str], str] | None:
         )
         return None
 
-    if provider in {"api", "auto"} and LLM_MODELS:
+    if provider in {"api", "auto"} and settings.llm.models:
         logger.info("Selected enrichment provider: API (LLM_MODELS)")
         return _call_llm_api
 

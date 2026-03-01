@@ -5,9 +5,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from ttsfeed.config import POST_TAGS
-
-POST_TAG_LINES: str = "\n".join(f"  - {name}: {desc}" for name, desc in POST_TAGS.items())
+from ttsfeed.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -31,18 +29,6 @@ ENRICHMENT_SCHEMA: str = json.dumps(
         "required": ["summary", "posts"],
     }
 )
-
-_PROMPT_TEMPLATE = """\
-You are analyzing Trump's Truth Social posts for a daily briefing.
-
-Substantive posts ({n} total):
-{numbered_posts}
-
-Assign each post exactly one category from this list. Use "Other" if no specific category fits:
-{category_lines}
-
-Respond with valid JSON only, no markdown:
-{{"summary": "<2-3 sentence daily overview>", "posts": [{{"id": "<post id>", "categories": ["<category names>"]}}]}}"""
 
 
 def _is_reblog(post: dict) -> bool:
@@ -117,10 +103,10 @@ def analyze_posts(posts: list[dict], complete: Callable[[str], str]) -> EnrichRe
         f"{i + 1}. [id={p.get('id', '')}] {p.get('content', '')}"
         for i, p in enumerate(substantive)
     )
-    prompt = _PROMPT_TEMPLATE.format(
+    prompt = settings.prompt.template.format(
         n=len(substantive),
         numbered_posts=numbered_posts,
-        category_lines=POST_TAG_LINES,
+        categories=settings.prompt.categories,
     )
 
     logger.debug("LLM prompt:\n%s", prompt)

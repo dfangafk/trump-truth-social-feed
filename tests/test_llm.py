@@ -6,6 +6,7 @@ import subprocess
 
 import pytest
 
+import ttsfeed.llm
 from ttsfeed.analyze import ENRICHMENT_SCHEMA
 from ttsfeed.llm import (
     _call_claude_cli,
@@ -15,40 +16,40 @@ from ttsfeed.llm import (
 )
 
 
+def _patch_llm_settings(mocker, provider, models):
+    mocker.patch.object(ttsfeed.llm.settings.llm, "provider", provider)
+    mocker.patch.object(ttsfeed.llm.settings.llm, "models", models)
+
+
 def test_build_complete_fn_returns_api_fn_when_llm_models_env_set(mocker):
-    mocker.patch("ttsfeed.llm.LLM_PROVIDER", "auto")
-    mocker.patch("ttsfeed.llm.LLM_MODELS", ["openai/gpt-4o"])
+    _patch_llm_settings(mocker, "auto", ["openai/gpt-4o"])
     mock_which = mocker.patch("ttsfeed.llm.shutil.which", return_value=None)
     assert build_complete_fn() is _call_llm_api
     mock_which.assert_not_called()
 
 
 def test_build_complete_fn_returns_api_fn_when_provider_explicitly_api(mocker):
-    mocker.patch("ttsfeed.llm.LLM_PROVIDER", "api")
-    mocker.patch("ttsfeed.llm.LLM_MODELS", ["openai/gpt-4o"])
+    _patch_llm_settings(mocker, "api", ["openai/gpt-4o"])
     mock_which = mocker.patch("ttsfeed.llm.shutil.which", return_value=None)
     assert build_complete_fn() is _call_llm_api
     mock_which.assert_not_called()
 
 
 def test_build_complete_fn_returns_none_when_provider_api_without_models(mocker):
-    mocker.patch("ttsfeed.llm.LLM_PROVIDER", "api")
-    mocker.patch("ttsfeed.llm.LLM_MODELS", [])
+    _patch_llm_settings(mocker, "api", [])
     mock_which = mocker.patch("ttsfeed.llm.shutil.which", return_value="/usr/bin/claude")
     assert build_complete_fn() is None
     mock_which.assert_not_called()
 
 
 def test_build_complete_fn_returns_none_when_claude_not_on_path(mocker):
-    mocker.patch("ttsfeed.llm.LLM_PROVIDER", "auto")
-    mocker.patch("ttsfeed.llm.LLM_MODELS", [])
+    _patch_llm_settings(mocker, "auto", [])
     mocker.patch("ttsfeed.llm.shutil.which", return_value=None)
     assert build_complete_fn() is None
 
 
 def test_build_complete_fn_returns_callable_when_claude_on_path(mocker):
-    mocker.patch("ttsfeed.llm.LLM_PROVIDER", "auto")
-    mocker.patch("ttsfeed.llm.LLM_MODELS", [])
+    _patch_llm_settings(mocker, "auto", [])
     mocker.patch("ttsfeed.llm.shutil.which", return_value="/usr/local/bin/claude")
     result = build_complete_fn()
     assert callable(result)
@@ -57,22 +58,19 @@ def test_build_complete_fn_returns_callable_when_claude_on_path(mocker):
 def test_build_complete_fn_returns_claude_fn_when_provider_explicitly_claude_code_cli(
     mocker,
 ):
-    mocker.patch("ttsfeed.llm.LLM_PROVIDER", "claude_code_cli")
-    mocker.patch("ttsfeed.llm.LLM_MODELS", [])
+    _patch_llm_settings(mocker, "claude_code_cli", [])
     mocker.patch("ttsfeed.llm.shutil.which", return_value="/usr/local/bin/claude")
     assert build_complete_fn() is _call_claude_cli
 
 
 def test_build_complete_fn_returns_none_when_provider_claude_code_cli_unavailable(mocker):
-    mocker.patch("ttsfeed.llm.LLM_PROVIDER", "claude_code_cli")
-    mocker.patch("ttsfeed.llm.LLM_MODELS", [])
+    _patch_llm_settings(mocker, "claude_code_cli", [])
     mocker.patch("ttsfeed.llm.shutil.which", return_value=None)
     assert build_complete_fn() is None
 
 
 def test_build_complete_fn_returns_codex_fn_when_codex_on_path(mocker):
-    mocker.patch("ttsfeed.llm.LLM_PROVIDER", "auto")
-    mocker.patch("ttsfeed.llm.LLM_MODELS", [])
+    _patch_llm_settings(mocker, "auto", [])
     mocker.patch(
         "ttsfeed.llm.shutil.which",
         side_effect=lambda cmd: "/usr/local/bin/codex" if cmd == "codex" else None,
@@ -81,8 +79,7 @@ def test_build_complete_fn_returns_codex_fn_when_codex_on_path(mocker):
 
 
 def test_build_complete_fn_returns_codex_fn_when_provider_explicitly_codex_cli(mocker):
-    mocker.patch("ttsfeed.llm.LLM_PROVIDER", "codex_cli")
-    mocker.patch("ttsfeed.llm.LLM_MODELS", [])
+    _patch_llm_settings(mocker, "codex_cli", [])
     mocker.patch(
         "ttsfeed.llm.shutil.which",
         side_effect=lambda cmd: "/usr/local/bin/codex" if cmd == "codex" else None,
@@ -91,15 +88,13 @@ def test_build_complete_fn_returns_codex_fn_when_provider_explicitly_codex_cli(m
 
 
 def test_build_complete_fn_returns_none_when_provider_codex_cli_unavailable(mocker):
-    mocker.patch("ttsfeed.llm.LLM_PROVIDER", "codex_cli")
-    mocker.patch("ttsfeed.llm.LLM_MODELS", [])
+    _patch_llm_settings(mocker, "codex_cli", [])
     mocker.patch("ttsfeed.llm.shutil.which", return_value=None)
     assert build_complete_fn() is None
 
 
 def test_build_complete_fn_returns_none_on_invalid_provider(mocker):
-    mocker.patch("ttsfeed.llm.LLM_PROVIDER", "bogus")
-    mocker.patch("ttsfeed.llm.LLM_MODELS", [])
+    _patch_llm_settings(mocker, "bogus", [])
     mock_which = mocker.patch("ttsfeed.llm.shutil.which", return_value="/usr/bin/claude")
     assert build_complete_fn() is None
     mock_which.assert_not_called()
@@ -194,7 +189,7 @@ def test_call_codex_cli_raises_on_nonzero_returncode(mocker):
 
 
 def test_call_llm_api_success(mocker):
-    mocker.patch("ttsfeed.llm.LLM_MODELS", ["openai/gpt-4o"])
+    mocker.patch.object(ttsfeed.llm.settings.llm, "models", ["openai/gpt-4o"])
     mock_completion = mocker.patch("ttsfeed.llm.completion")
     mock_completion.return_value = mocker.Mock(
         choices=[
@@ -218,7 +213,7 @@ def test_call_llm_api_success(mocker):
 
 
 def test_call_llm_api_raises_on_litellm_error(mocker):
-    mocker.patch("ttsfeed.llm.LLM_MODELS", ["openai/gpt-4o"])
+    mocker.patch.object(ttsfeed.llm.settings.llm, "models", ["openai/gpt-4o"])
     mocker.patch("ttsfeed.llm.completion", side_effect=RuntimeError("api failed"))
 
     with pytest.raises(RuntimeError, match="api failed"):
@@ -226,14 +221,14 @@ def test_call_llm_api_raises_on_litellm_error(mocker):
 
 
 def test_call_llm_api_raises_when_models_empty(mocker):
-    mocker.patch("ttsfeed.llm.LLM_MODELS", [])
+    mocker.patch.object(ttsfeed.llm.settings.llm, "models", [])
 
     with pytest.raises(RuntimeError, match="LLM_MODELS is required"):
         _call_llm_api("test prompt")
 
 
 def test_call_llm_api_falls_back_when_primary_fails(mocker):
-    mocker.patch("ttsfeed.llm.LLM_MODELS", ["openai/gpt-4o", "gemini/gemini-2.5-flash"])
+    mocker.patch.object(ttsfeed.llm.settings.llm, "models", ["openai/gpt-4o", "gemini/gemini-2.5-flash"])
     fallback_content = '{"summary":"fallback summary","posts":[]}'
     mock_completion = mocker.patch(
         "ttsfeed.llm.completion",
@@ -254,7 +249,7 @@ def test_call_llm_api_falls_back_when_primary_fails(mocker):
 
 
 def test_call_llm_api_raises_when_all_models_fail(mocker):
-    mocker.patch("ttsfeed.llm.LLM_MODELS", ["openai/gpt-4o", "gemini/gemini-2.5-flash"])
+    mocker.patch.object(ttsfeed.llm.settings.llm, "models", ["openai/gpt-4o", "gemini/gemini-2.5-flash"])
     mocker.patch(
         "ttsfeed.llm.completion",
         side_effect=[

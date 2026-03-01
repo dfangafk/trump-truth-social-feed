@@ -1,0 +1,45 @@
+# Tunable behavior settings for ttsfeed.
+# Secrets (API keys, email credentials) stay in .env — never commit .env.
+
+[pipeline]
+hours = 24           # look-back window for new posts (hours)
+log_level = "INFO"   # DEBUG | INFO | WARNING | ERROR
+# schedule = "0 23 * * *"  # informational only — also update .github/workflows/daily_ingest.yml to match
+
+[llm]
+provider = "auto"    # auto | api | claude_code_cli | codex_cli
+models = [
+  "gemini/gemini-2.5-flash",
+]
+
+[llm.api_kwargs]
+num_retries = 3
+
+[prompt]
+# Python .format() template. Placeholders: {n}, {numbered_posts}, {categories}.
+# Use {{ and }} to include literal braces in the output (e.g. the JSON example below).
+categories = """
+  - Elections & Campaigns: Elections, voting, polling, endorsements, rallies, and campaign competition.
+  - Tariffs & Trade: Tariffs, trade deficits/surpluses, trade deals, and import/export policy.
+  - Economy, Jobs & Inflation: Economic growth, labor market conditions, wages, inflation, and business activity.
+  - Taxes & Regulation: Tax policy, regulatory burden, deregulation, permits, and compliance.
+  - Border & Immigration: Border enforcement, migration, asylum, deportation, and entry policy.
+  - Crime & Public Safety: Crime trends, policing, drugs/fentanyl, gangs, and local public safety.
+  - Courts & Legal Proceedings: Courts, judges, trials, indictments, rulings, constitutional and legal claims.
+  - Foreign Affairs & Defense: International conflicts, geopolitics, military posture, alliances, and national security.
+  - Media & Public Narrative: Media coverage, press criticism, narrative framing, speech and culture debates.
+  - Other: Fallback when no topical category is a clear fit.
+"""
+
+template = """
+You are analyzing Trump's Truth Social posts for a daily briefing.
+
+Substantive posts ({n} total):
+{numbered_posts}
+
+Assign each post exactly one category from this list. Use "Other" if no specific category fits:
+{categories}
+
+Respond with valid JSON only, no markdown:
+{{"summary": "<2-3 sentence daily overview>", "posts": [{{"id": "<post id>", "categories": ["<category names>"]}}]}}
+"""

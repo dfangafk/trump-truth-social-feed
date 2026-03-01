@@ -53,6 +53,7 @@ include = [
     "README.md",
     "LICENSE",
     "pyproject.toml",
+    "ttsfeed.toml",
 ]
 
 [tool.uv]
