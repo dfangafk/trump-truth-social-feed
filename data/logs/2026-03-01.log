@@ -1,0 +1,20 @@
+2026-03-01 13:06:13,492 [INFO] __main__: Pipeline start
+2026-03-01 13:06:13,492 [INFO] ttsfeed.fetch: Downloading archive from https://ix.cnn.io/data/truth-social/truth_archive.json
+2026-03-01 13:06:13,724 [INFO] ttsfeed.fetch: Downloaded 17.09 MB
+2026-03-01 13:06:13,934 [INFO] ttsfeed.fetch: Parsed 31775 posts
+2026-03-01 13:06:13,934 [INFO] __main__: Fetched 31775 total posts
+2026-03-01 13:06:13,941 [INFO] __main__: 5 new posts found
+2026-03-01 13:06:13,941 [INFO] __main__: Run date: 2026-03-01
+2026-03-01 13:06:13,942 [INFO] ttsfeed.export: Saved output: 2026-03-01.json (5 new posts)
+2026-03-01 13:06:13,943 [INFO] ttsfeed.llm: Selected enrichment provider: API (LLM_MODELS)
+2026-03-01 13:06:13,943 [INFO] ttsfeed.analyze: Analyzing 5 posts (4 substantive)
+2026-03-01 13:06:13,943 [INFO] ttsfeed.llm: Trying LLM model: gemini/gemini-3-flash-preview
+2026-03-01 13:06:13,956 [INFO] LiteLLM: 
+LiteLLM completion() model= gemini-3-flash-preview; provider = gemini
+2026-03-01 13:06:16,477 [INFO] LiteLLM: Wrapper: Completed Call, calling success_handler
+2026-03-01 13:06:16,479 [INFO] ttsfeed.llm: LLM call succeeded with model: gemini/gemini-3-flash-preview
+2026-03-01 13:06:16,479 [INFO] ttsfeed.analyze: LLM response parsed: 4 categories, summary 318 chars
+2026-03-01 13:06:16,479 [INFO] __main__: Enrichment complete: 5 categorized posts
+2026-03-01 13:06:16,481 [INFO] ttsfeed.export: Saved output: 2026-03-01.json (5 new posts)
+2026-03-01 13:06:16,481 [INFO] __main__: Pipeline complete in 3.0 seconds
+2026-03-01 13:06:17,456 [INFO] ttsfeed.notify: Notification email sent to danielfangyg@gmail.com
