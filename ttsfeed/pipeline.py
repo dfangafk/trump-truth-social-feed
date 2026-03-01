@@ -1,20 +1,19 @@
 """Orchestrator: fetch + filter + analyze (single entry point)."""
 
 import logging
-import os
 import sys
 
 import pandas as pd
 
 from ttsfeed.analyze import analyze_posts
-from ttsfeed.config import LOGS_OUTPUT_DIR, enriched_output_path, raw_output_path
+from ttsfeed.config import ENRICHED_OUTPUT_DIR, LOGS_OUTPUT_DIR, RAW_OUTPUT_DIR, settings
 from ttsfeed.export import post_to_dict, save_output
 from ttsfeed.fetch import bytes_to_dataframe, download_archive, filter_recent_posts
 from ttsfeed.llm import build_complete_fn
 from ttsfeed.notify import send_notification
 
 _LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-_log_level = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO)
+_log_level = getattr(logging, settings.pipeline.log_level.upper(), logging.INFO)
 logging.basicConfig(level=_log_level, format=_LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
@@ -42,11 +41,11 @@ def main() -> None:
         logger.exception("Fetch failed")
         sys.exit(1)
 
-    new_posts_df = filter_recent_posts(df)
+    new_posts_df = filter_recent_posts(df, hours=settings.pipeline.hours)
     logger.info("%d new posts found", len(new_posts_df))
     reference_time = pd.Timestamp.now("UTC")
-    raw_path = raw_output_path(run_date)
-    enriched_path = enriched_output_path(run_date)
+    raw_path = RAW_OUTPUT_DIR / f"{run_date.isoformat()}.json"
+    enriched_path = ENRICHED_OUTPUT_DIR / f"{run_date.isoformat()}.json"
     logger.info("Run date: %s", run_date)
 
     save_output(
@@ -56,7 +55,6 @@ def main() -> None:
         output_dir=raw_path.parent,
         output_name=raw_path.name,
     )
-
 
     new_posts = [post_to_dict(row) for _, row in new_posts_df.iterrows()]
     enrichment = None

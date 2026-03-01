@@ -31,7 +31,7 @@ def test_main_no_llm_saves_once(mocker):
 
     mock_download.assert_called_once()
     mock_parse.assert_called_once_with(b"raw")
-    mock_filter.assert_called_once_with(mock_df)
+    mock_filter.assert_called_once_with(mock_df, hours=24)
     mock_save.assert_called_once_with(
         mock_df,
         total_archive=len(mock_df),
