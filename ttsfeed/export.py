@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from ttsfeed.analyze import EnrichResult
-from ttsfeed.config import ENRICHED_OUTPUT_DIR, TRUTH_SOCIAL_PROFILE_URL, enriched_output_path
+from ttsfeed.config import ENRICHED_OUTPUT_DIR, TRUTH_SOCIAL_PROFILE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +79,6 @@ def save_output(
 
     if output_name:
         path = target_dir / output_name
-    elif output_dir is None:
-        path = enriched_output_path(reference_time.date())
     else:
         path = target_dir / f"{reference_time.date().isoformat()}.json"
     with open(path, "w") as f:

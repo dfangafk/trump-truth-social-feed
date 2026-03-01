@@ -9,15 +9,18 @@ A daily pipeline that downloads Trump's Truth Social archive from CNN, filters p
 ```
 trump-truth-social-feed/
 ├── pyproject.toml          # Dependencies, entry point, build config
+├── ttsfeed.toml            # User-editable behavior settings (version-controlled)
+├── .env                    # Secrets only — never committed (API keys, email creds)
 ├── ttsfeed/                # Main package
 │   ├── __init__.py
 │   ├── analyze.py          # LLM enrichment → EnrichResult (summary + per-post categories)
-│   ├── config.py           # URLs, paths, output dirs, dotenv-backed LLM/SMTP config constants
+│   ├── config.py           # URLs, paths, output dirs; LLM/category aliases from settings
 │   ├── export.py           # Serialize posts to JSON, write daily output files
 │   ├── fetch.py            # Download archive → parse to DataFrame → filter recent posts
 │   ├── llm.py              # LLM provider abstraction — explicit `LLM_PROVIDER` selection + auto fallback
 │   ├── notify.py           # Email digest after enrichment — fails silently if credentials absent
-│   └── pipeline.py         # CLI entry point (fetch → filter → save → analyze → save → notify)
+│   ├── pipeline.py         # CLI entry point (fetch → filter → save → analyze → save → notify)
+│   ├── config.py           # URLs, paths, output dirs, settings dataclasses, TOML loader
 ├── tests/
 │   ├── conftest.py         # Shared fixtures (sample DataFrames, bytes)
 │   ├── test_analyze.py
@@ -25,7 +28,7 @@ trump-truth-social-feed/
 │   ├── test_export.py
 │   ├── test_fetch.py
 │   ├── test_llm.py
-│   └── test_pipeline.py
+│   ├── test_pipeline.py
 └── data/                   # Generated at runtime
     ├── raw/                # Daily raw JSON output files
     ├── enriched/           # Daily enriched JSON output files
@@ -78,9 +81,8 @@ trump-truth-social-feed/
 │ _post_to_dict()      │  │ ARCHIVE_URL_JSON                 │
 │   ↓                  │  │ TRUTH_SOCIAL_PROFILE_URL         │
 │ save_output()        │  │ RAW_OUTPUT_DIR, ENRICHED_OUTPUT_DIR │
-│                      │  │ CATEGORIES, CATEGORY_LINES       │
-└──────────────────────┘  │ raw_output_path(date), enriched_output_path(date) │
-                          └──────────────────────────────────┘
+│                      │  │ settings (LLM/prompt/pipeline)   │
+└──────────────────────┘  └──────────────────────────────────┘
 ```
 
 ### Data Flow
@@ -122,7 +124,26 @@ _write_run_summary()        ← [always] write run log to data/logs/YYYY-MM-DD.j
 
 ## Module Details
 
-### `config.py` — Constants & Path Helpers
+### `config.py` — Settings Dataclasses, TOML Loader & Constants
+
+Settings live in `config.py` (no separate `settings.py` module). `load_settings()` reads
+`ttsfeed.toml` at the repo root using `tomllib` (stdlib, Python 3.11+) and is called once
+at module import time; the result is exposed as the module-level `settings` singleton.
+
+| Dataclass         | Fields                                                         |
+|-------------------|----------------------------------------------------------------|
+| `LLMSettings`     | `provider`, `models`, `api_kwargs: dict[str, Any]` — open passthrough dict forwarded directly to `litellm.completion()`; any litellm kwarg accepted; defaults to `{"num_retries": 3}` |
+| `PipelineSettings`| `hours`, `log_level`, `schedule` (informational)              |
+| `PromptSettings`  | `template`, `categories` — both have hardcoded defaults so the pipeline works without `ttsfeed.toml` |
+| `Settings`        | `pipeline`, `llm`, `prompt`                                   |
+
+**`ttsfeed.toml`** — ships with the repo as the reference config. Contains all tunable
+behavior (`[pipeline]`, `[llm]`, `[llm.api_kwargs]`, `[prompt]`). Secrets (API keys, SMTP
+credentials) stay in `.env` and are never committed. Categories and the prompt template are
+defined under `[prompt]` in the TOML file, with hardcoded fallback defaults in `PromptSettings`
+for installs that do not include the TOML file.
+
+**Constants exported by `config.py`:**
 
 | Export                    | Description                              |
 |---------------------------|------------------------------------------|
@@ -131,20 +152,15 @@ _write_run_summary()        ← [always] write run log to data/logs/YYYY-MM-DD.j
 | `BASE_DIR`                | Repository root                          |
 | `RAW_OUTPUT_DIR`          | `data/raw/`                              |
 | `ENRICHED_OUTPUT_DIR`     | `data/enriched/`                         |
-| `LLM_PROVIDER`            | Dotenv/env-backed provider selector (`auto` default) |
-| `LLM_MODELS`              | Dotenv/env-backed JSON array of models to try in order (e.g. `'["gemini/gemini-2.5-flash"]'`); empty = no API enrichment |
+| `LOGS_OUTPUT_DIR`         | `data/logs/`                             |
 | `SENDER_GMAIL`            | Dotenv/env-backed Gmail sender address — must be `@gmail.com` (empty = notify disabled) |
 | `GMAIL_APP_PASSWORD`      | Dotenv/env-backed Gmail App Password (16-char) |
 | `RECEIVER_EMAIL`          | Dotenv/env-backed recipient address (any provider) |
-| `CATEGORIES`              | `dict[str, str]` mapping category name → description (single source of truth) |
-| `MAX_TAGS_PER_POST`       | Max number of categories assignable to a single post (`3`) |
-| `CATEGORY_LINES`          | Pre-formatted `"  - name: description\n..."` string for LLM prompts |
-| `raw_output_path(date)`   | → `data/raw/YYYY-MM-DD.json`             |
-| `enriched_output_path(date)` | → `data/enriched/YYYY-MM-DD.json`    |
-| `LOGS_OUTPUT_DIR`         | `data/logs/`                             |
-| `log_output_path(date)`   | → `data/logs/YYYY-MM-DD.json`            |
+| `settings`                | Module-level `Settings` singleton (use `settings.llm.provider`, `settings.prompt.template`, etc.) |
 
-`config.py` calls `load_dotenv()` at import time so local `.env` values are loaded once and exposed through constants. Category definitions live directly in `config.py` as the `CATEGORIES` dict — no external file read required.
+`config.py` calls `load_dotenv()` at import time so local `.env` values are loaded once.
+
+---
 
 ### `fetch.py` — Download, Parse & Filter
 
@@ -289,7 +305,7 @@ pytest
 |--------------------|-------------------------------------------------------------------|
 | `test_notify.py`   | `send_notification`: SMTP call verified, correct subject/body, early-return when env vars missing |
 | `test_analyze.py`  | `analyze_posts`: success path, empty posts, malformed JSON, missing keys, propagated exceptions; `_is_reblog`/`_has_content` helpers; pre-filter exclusion of reblogs/empty posts from LLM; all-non-substantive skips LLM |
-| `test_config.py`   | Path formatting, zero-padded dates                                |
+| `test_config.py`   | `load_settings()`: defaults, TOML overrides (pipeline/llm/prompt), env var overrides, invalid JSON ignored, corrupt TOML falls back to defaults |
 | `test_export.py`   | `_post_to_dict` (basic fields, list media, JSON-string media, NaN counts, None media), `save_output` (JSON structure, zero-post output, per-post enrichment categories) |
 | `test_fetch.py`    | Download (success + failure), parsing (JSON), ID normalization, sorting, `filter_recent_posts` (recent/none/all/custom window, defaults to now) |
 | `test_llm.py`      | `build_complete_fn`: explicit `LLM_PROVIDER` selection (`api`/`claude_code_cli`/`codex_cli`/`auto`), invalid provider handling, availability checks, and None fallback; `_call_llm_api`: success + propagated provider errors; `_call_claude_cli`: success path, non-zero exit code, missing structured_output key; `_call_codex_cli`: success + non-zero exit |
