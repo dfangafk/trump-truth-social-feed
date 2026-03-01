@@ -4,11 +4,12 @@
 [pipeline]
 hours = 24           # look-back window for new posts (hours)
 log_level = "INFO"   # DEBUG | INFO | WARNING | ERROR
-# schedule = "0 23 * * *"  # informational only — also update .github/workflows/daily_ingest.yml to match
+# schedule = "0 12 * * *"  # informational only — also update .github/workflows/daily_ingest.yml to match
 
 [llm]
 provider = "auto"    # auto | api | claude_code_cli | codex_cli
 models = [
+  "gemini/gemini-3-flash-preview",
   "gemini/gemini-2.5-flash",
 ]
 
