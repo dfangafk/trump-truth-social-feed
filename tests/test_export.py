@@ -4,19 +4,12 @@ import json
 
 import pandas as pd
 
-import ttsfeed.config as config_mod
-import ttsfeed.export as export_mod
 from ttsfeed.analyze import EnrichResult
+from ttsfeed.config import settings
 from ttsfeed.export import post_to_dict, save_output
 
 # Fixed reference time for deterministic tests
 REF_TIME = pd.Timestamp("2025-06-15T12:00:00Z")
-
-
-def _patch_dirs(monkeypatch, tmp_path):
-    """Redirect ENRICHED_OUTPUT_DIR to tmp_path."""
-    monkeypatch.setattr(config_mod, "ENRICHED_OUTPUT_DIR", tmp_path)
-    monkeypatch.setattr(export_mod, "ENRICHED_OUTPUT_DIR", tmp_path)
 
 
 # --- post_to_dict ---
@@ -67,7 +60,7 @@ def testpost_to_dict_none_media():
 
 
 def test_save_output_creates_json(tmp_path, monkeypatch, sample_df):
-    _patch_dirs(monkeypatch, tmp_path)
+    monkeypatch.setattr(settings.paths, "enriched_output_dir", tmp_path)
 
     new_posts = sample_df.iloc[1:]  # 2 "new" posts
     save_output(new_posts, total_archive=3, hours=24, reference_time=REF_TIME)
@@ -82,7 +75,7 @@ def test_save_output_creates_json(tmp_path, monkeypatch, sample_df):
 
 
 def test_save_output_zero_new_posts(tmp_path, monkeypatch, sample_df):
-    _patch_dirs(monkeypatch, tmp_path)
+    monkeypatch.setattr(settings.paths, "enriched_output_dir", tmp_path)
 
     empty = sample_df.iloc[0:0]
     save_output(empty, total_archive=5, hours=24, reference_time=REF_TIME)
@@ -96,7 +89,7 @@ def test_save_output_zero_new_posts(tmp_path, monkeypatch, sample_df):
 def test_save_output_with_enrichment_embeds_per_post_categories(
     tmp_path, monkeypatch, sample_df
 ):
-    _patch_dirs(monkeypatch, tmp_path)
+    monkeypatch.setattr(settings.paths, "enriched_output_dir", tmp_path)
 
     new_posts = sample_df.iloc[1:]
     enrichment = EnrichResult(
@@ -123,7 +116,7 @@ def test_save_output_with_enrichment_embeds_per_post_categories(
 def test_save_output_without_enrichment_posts_have_no_categories(
     tmp_path, monkeypatch, sample_df
 ):
-    _patch_dirs(monkeypatch, tmp_path)
+    monkeypatch.setattr(settings.paths, "enriched_output_dir", tmp_path)
 
     new_posts = sample_df.iloc[1:]
     save_output(new_posts, total_archive=3, hours=24, reference_time=REF_TIME)
@@ -134,7 +127,7 @@ def test_save_output_without_enrichment_posts_have_no_categories(
 
 
 def test_save_output_with_explicit_output_name(tmp_path, monkeypatch, sample_df):
-    _patch_dirs(monkeypatch, tmp_path)
+    monkeypatch.setattr(settings.paths, "enriched_output_dir", tmp_path)
 
     new_posts = sample_df.iloc[1:]
     save_output(
@@ -142,8 +135,7 @@ def test_save_output_with_explicit_output_name(tmp_path, monkeypatch, sample_df)
         total_archive=3,
         hours=24,
         reference_time=REF_TIME,
-        output_dir=tmp_path,
-        output_name="raw.json",
+        output_path=tmp_path / "raw.json",
     )
 
     assert (tmp_path / "raw.json").exists()

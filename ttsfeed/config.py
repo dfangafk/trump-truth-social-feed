@@ -18,9 +18,6 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # repo root
 DATA_DIR = BASE_DIR / "data"
-RAW_OUTPUT_DIR = DATA_DIR / "raw"
-ENRICHED_OUTPUT_DIR = DATA_DIR / "enriched"
-LOGS_OUTPUT_DIR = DATA_DIR / "logs"
 
 # --- URL constants ---
 
@@ -53,6 +50,14 @@ class PromptSettings(BaseModel):
     categories: str
 
 
+class PathSettings(BaseModel):
+    """Filesystem output paths for the pipeline."""
+
+    raw_output_dir: Path = BASE_DIR / "data" / "raw"
+    enriched_output_dir: Path = BASE_DIR / "data" / "enriched"
+    logs_output_dir: Path = BASE_DIR / "data" / "logs"
+
+
 class Settings(BaseSettings):
     """All tunable settings for ttsfeed, loaded from ttsfeed.toml and .env."""
 
@@ -65,6 +70,7 @@ class Settings(BaseSettings):
     pipeline: PipelineSettings = PipelineSettings()
     llm: LLMSettings = LLMSettings()
     prompt: PromptSettings
+    paths: PathSettings = PathSettings()
 
     # Secrets from .env
     sender_gmail: str = ""

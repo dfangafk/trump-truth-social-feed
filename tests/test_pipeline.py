@@ -1,9 +1,9 @@
 """Tests for ttsfeed.pipeline — CLI orchestrator."""
 
-from ttsfeed.config import ENRICHED_OUTPUT_DIR, RAW_OUTPUT_DIR
 import pandas as pd
 import pytest
 
+from ttsfeed.config import settings
 from ttsfeed.pipeline import main
 
 
@@ -36,8 +36,7 @@ def test_main_no_llm_saves_once(mocker):
         mock_df,
         total_archive=len(mock_df),
         reference_time=mock_now,
-        output_dir=RAW_OUTPUT_DIR,
-        output_name="2025-06-15.json",
+        output_path=settings.paths.raw_output_dir / "2025-06-15.json",
     )
 
 
@@ -68,16 +67,14 @@ def test_main_with_llm_saves_twice(mocker):
     assert first_call.kwargs == {
         "total_archive": len(mock_df),
         "reference_time": mock_now,
-        "output_dir": RAW_OUTPUT_DIR,
-        "output_name": "2025-06-15.json",
+        "output_path": settings.paths.raw_output_dir / "2025-06-15.json",
     }
     assert first_call.args == (mock_df,)
     assert second_call.kwargs == {
         "total_archive": len(mock_df),
         "reference_time": mock_now,
         "enrichment": enrichment,
-        "output_dir": ENRICHED_OUTPUT_DIR,
-        "output_name": "2025-06-15.json",
+        "output_path": settings.paths.enriched_output_dir / "2025-06-15.json",
     }
     assert second_call.args == (mock_df,)
 
@@ -104,8 +101,7 @@ def test_main_llm_failure_saves_once(mocker):
         mock_df,
         total_archive=len(mock_df),
         reference_time=mock_now,
-        output_dir=RAW_OUTPUT_DIR,
-        output_name="2025-06-15.json",
+        output_path=settings.paths.raw_output_dir / "2025-06-15.json",
     )
 
 
