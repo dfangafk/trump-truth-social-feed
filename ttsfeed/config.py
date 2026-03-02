@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     paths: PathSettings = PathSettings()
 
     # Secrets from .env
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
+    gemini_api_key: str = ""
     sender_gmail: str = ""
     gmail_app_password: str = ""
     receiver_email: str = ""
