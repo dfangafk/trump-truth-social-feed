@@ -6,7 +6,7 @@ import sys
 import pandas as pd
 
 from ttsfeed.analyze import analyze_posts
-from ttsfeed.config import ENRICHED_OUTPUT_DIR, LOGS_OUTPUT_DIR, RAW_OUTPUT_DIR, settings
+from ttsfeed.config import settings
 from ttsfeed.export import post_to_dict, save_output
 from ttsfeed.fetch import bytes_to_dataframe, download_archive, filter_recent_posts
 from ttsfeed.llm import build_complete_fn
@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 def _add_file_handler(run_date) -> None:
     """Attach a date-stamped FileHandler to the root logger."""
-    LOGS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    log_file = LOGS_OUTPUT_DIR / f"{run_date.isoformat()}.log"
+    settings.paths.logs_output_dir.mkdir(parents=True, exist_ok=True)
+    log_file = settings.paths.logs_output_dir / f"{run_date.isoformat()}.log"
     file_handler = logging.FileHandler(log_file, encoding="utf-8")
     file_handler.setFormatter(logging.Formatter(_LOG_FORMAT))
     logging.getLogger().addHandler(file_handler)
@@ -44,16 +44,15 @@ def main() -> None:
     new_posts_df = filter_recent_posts(df, hours=settings.pipeline.hours)
     logger.info("%d new posts found", len(new_posts_df))
     reference_time = pd.Timestamp.now("UTC")
-    raw_path = RAW_OUTPUT_DIR / f"{run_date.isoformat()}.json"
-    enriched_path = ENRICHED_OUTPUT_DIR / f"{run_date.isoformat()}.json"
+    raw_path = settings.paths.raw_output_dir / f"{run_date.isoformat()}.json"
+    enriched_path = settings.paths.enriched_output_dir / f"{run_date.isoformat()}.json"
     logger.info("Run date: %s", run_date)
 
     save_output(
         new_posts_df,
         total_archive=len(df),
         reference_time=reference_time,
-        output_dir=raw_path.parent,
-        output_name=raw_path.name,
+        output_path=raw_path,
     )
 
     new_posts = [post_to_dict(row) for _, row in new_posts_df.iterrows()]
@@ -72,8 +71,7 @@ def main() -> None:
                 total_archive=len(df),
                 reference_time=reference_time,
                 enrichment=enrichment,
-                output_dir=enriched_path.parent,
-                output_name=enriched_path.name,
+                output_path=enriched_path,
             )
 
         except Exception:
