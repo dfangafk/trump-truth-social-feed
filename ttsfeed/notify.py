@@ -13,7 +13,7 @@ import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
 from ttsfeed.analyze import EnrichResult
-from ttsfeed.config import GMAIL_APP_PASSWORD, RECEIVER_EMAIL, SENDER_GMAIL
+from ttsfeed.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +44,8 @@ def send_notification(
     Skips silently if SENDER_GMAIL, GMAIL_APP_PASSWORD, or RECEIVER_EMAIL are not set.
     Catches and logs all exceptions to avoid failing the pipeline.
     """
-    if not (SENDER_GMAIL and GMAIL_APP_PASSWORD and RECEIVER_EMAIL):
-        logger.info("Email notification skipped (SENDER_GMAIL/GMAIL_APP_PASSWORD/RECEIVER_EMAIL not set)")
+    if not (settings.sender_gmail and settings.gmail_app_password and settings.receiver_email):
+        logger.info("Email notification skipped (sender_gmail/gmail_app_password/receiver_email not set)")
         return
 
     date_str = reference_time.astimezone(_ET).date().isoformat()
@@ -57,8 +57,8 @@ def send_notification(
     html_body = render_html(ctx)
 
     msg = MIMEMultipart("alternative")
-    msg["From"] = SENDER_GMAIL
-    msg["To"] = RECEIVER_EMAIL
+    msg["From"] = settings.sender_gmail
+    msg["To"] = settings.receiver_email
     msg["Subject"] = subject
     msg.attach(MIMEText(text_body, "plain"))
     msg.attach(MIMEText(html_body, "html"))
@@ -66,9 +66,9 @@ def send_notification(
     try:
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-            server.login(SENDER_GMAIL, GMAIL_APP_PASSWORD)
+            server.login(settings.sender_gmail, settings.gmail_app_password)
             server.send_message(msg)
-        logger.info("Notification email sent to %s", RECEIVER_EMAIL)
+        logger.info("Notification email sent to %s", settings.receiver_email)
     except Exception:
         logger.warning("Failed to send notification email", exc_info=True)
 
