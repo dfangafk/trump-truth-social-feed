@@ -24,7 +24,7 @@ dependencies = [
     "jinja2>=3.0",
     "litellm>=1.0",
     "pandas>=3.0.0",
-    "python-dotenv>=1.0",
+    "pydantic-settings>=2.3",
     "requests>=2.32.5",
 ]
 

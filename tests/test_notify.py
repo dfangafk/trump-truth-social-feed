@@ -30,11 +30,17 @@ SAMPLE_ENRICHMENT = EnrichResult(
 )
 
 
+def _patch_creds(mocker, sender="", password="", receiver=""):
+    cfg = mocker.patch("ttsfeed.notify.settings")
+    cfg.sender_gmail = sender
+    cfg.gmail_app_password = password
+    cfg.receiver_email = receiver
+    return cfg
+
+
 def test_send_notification_skips_when_no_creds(mocker):
     """Should log and return early when any credential is missing."""
-    mocker.patch("ttsfeed.notify.SENDER_GMAIL", "")
-    mocker.patch("ttsfeed.notify.GMAIL_APP_PASSWORD", "")
-    mocker.patch("ttsfeed.notify.RECEIVER_EMAIL", "")
+    _patch_creds(mocker)
     mock_smtp = mocker.patch("ttsfeed.notify.smtplib.SMTP_SSL")
 
     send_notification(REFERENCE_TIME, SAMPLE_POSTS, None)
@@ -44,9 +50,7 @@ def test_send_notification_skips_when_no_creds(mocker):
 
 def test_send_notification_skips_when_partial_creds(mocker):
     """Should skip if only some credentials are set."""
-    mocker.patch("ttsfeed.notify.SENDER_GMAIL", "sender@gmail.com")
-    mocker.patch("ttsfeed.notify.GMAIL_APP_PASSWORD", "")
-    mocker.patch("ttsfeed.notify.RECEIVER_EMAIL", "recipient@example.com")
+    _patch_creds(mocker, sender="sender@gmail.com", receiver="recipient@example.com")
     mock_smtp = mocker.patch("ttsfeed.notify.smtplib.SMTP_SSL")
 
     send_notification(REFERENCE_TIME, SAMPLE_POSTS, None)
@@ -56,9 +60,7 @@ def test_send_notification_skips_when_partial_creds(mocker):
 
 def test_send_notification_calls_smtp(mocker):
     """Should connect and send when all credentials are set."""
-    mocker.patch("ttsfeed.notify.SENDER_GMAIL", "sender@gmail.com")
-    mocker.patch("ttsfeed.notify.GMAIL_APP_PASSWORD", "abcdabcdabcdabcd")
-    mocker.patch("ttsfeed.notify.RECEIVER_EMAIL", "recipient@example.com")
+    _patch_creds(mocker, sender="sender@gmail.com", password="abcdabcdabcdabcd", receiver="recipient@example.com")
 
     mock_server = mocker.MagicMock()
     mock_smtp_cls = mocker.patch("ttsfeed.notify.smtplib.SMTP_SSL")
@@ -74,9 +76,7 @@ def test_send_notification_calls_smtp(mocker):
 
 def test_send_notification_subject_contains_date_and_count(mocker):
     """Subject should contain the date and post count."""
-    mocker.patch("ttsfeed.notify.SENDER_GMAIL", "sender@gmail.com")
-    mocker.patch("ttsfeed.notify.GMAIL_APP_PASSWORD", "abcdabcdabcdabcd")
-    mocker.patch("ttsfeed.notify.RECEIVER_EMAIL", "recipient@example.com")
+    _patch_creds(mocker, sender="sender@gmail.com", password="abcdabcdabcdabcd", receiver="recipient@example.com")
 
     mock_server = mocker.MagicMock()
     mock_smtp_cls = mocker.patch("ttsfeed.notify.smtplib.SMTP_SSL")
@@ -92,9 +92,7 @@ def test_send_notification_subject_contains_date_and_count(mocker):
 
 def test_send_notification_body_contains_summary(mocker):
     """Body should include the daily summary when enrichment is present."""
-    mocker.patch("ttsfeed.notify.SENDER_GMAIL", "sender@gmail.com")
-    mocker.patch("ttsfeed.notify.GMAIL_APP_PASSWORD", "abcdabcdabcdabcd")
-    mocker.patch("ttsfeed.notify.RECEIVER_EMAIL", "recipient@example.com")
+    _patch_creds(mocker, sender="sender@gmail.com", password="abcdabcdabcdabcd", receiver="recipient@example.com")
 
     mock_server = mocker.MagicMock()
     mock_smtp_cls = mocker.patch("ttsfeed.notify.smtplib.SMTP_SSL")
@@ -111,9 +109,7 @@ def test_send_notification_body_contains_summary(mocker):
 
 def test_send_notification_logs_warning_on_smtp_error(mocker):
     """SMTP failure should be caught and logged, not raised."""
-    mocker.patch("ttsfeed.notify.SENDER_GMAIL", "sender@gmail.com")
-    mocker.patch("ttsfeed.notify.GMAIL_APP_PASSWORD", "abcdabcdabcdabcd")
-    mocker.patch("ttsfeed.notify.RECEIVER_EMAIL", "recipient@example.com")
+    _patch_creds(mocker, sender="sender@gmail.com", password="abcdabcdabcdabcd", receiver="recipient@example.com")
     mocker.patch("ttsfeed.notify.smtplib.SMTP_SSL", side_effect=OSError("connection refused"))
 
     # Should not raise

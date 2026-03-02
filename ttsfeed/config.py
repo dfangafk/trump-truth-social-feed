@@ -1,17 +1,18 @@
 """Configuration constants and settings loader for the Truth Social data pipeline."""
 
-from dataclasses import dataclass
 import logging
-import os
 from pathlib import Path
-import tomllib
 from typing import Any
 
-from dotenv import load_dotenv
+from pydantic import BaseModel
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    TomlConfigSettingsSource
+)
 
 logger = logging.getLogger(__name__)
-
-load_dotenv()  # Load .env before reading env vars in load_settings().
 
 # --- Directory paths ---
 
@@ -26,97 +27,66 @@ LOGS_OUTPUT_DIR = DATA_DIR / "logs"
 ARCHIVE_URL_JSON = "https://ix.cnn.io/data/truth-social/truth_archive.json"
 TRUTH_SOCIAL_PROFILE_URL = "https://truthsocial.com/@realDonaldTrump"
 
-# --- Settings dataclasses ---
+# --- Settings models ---
 
 
-@dataclass
-class LLMSettings:
+class LLMSettings(BaseModel):
     """LLM provider and model configuration."""
 
-    provider: str
-    models: list[str]
-    api_kwargs: dict[str, Any]
+    provider: str = "auto"
+    models: list[str] = []
+    api_kwargs: dict[str, Any] = {}
 
 
-@dataclass
-class PipelineSettings:
+class PipelineSettings(BaseModel):
     """Pipeline run configuration."""
 
-    hours: int
-    log_level: str
-    schedule: str
+    hours: int = 24
+    log_level: str = "INFO"
+    schedule: str = "0 23 * * *"
 
 
-@dataclass
-class PromptSettings:
+class PromptSettings(BaseModel):
     """LLM prompt and category configuration."""
 
     template: str
     categories: str
 
 
-@dataclass
-class Settings:
-    """All tunable settings for ttsfeed, loaded from ttsfeed.toml."""
+class Settings(BaseSettings):
+    """All tunable settings for ttsfeed, loaded from ttsfeed.toml and .env."""
 
-    pipeline: PipelineSettings
-    llm: LLMSettings
+    model_config = SettingsConfigDict(
+        toml_file=BASE_DIR / "ttsfeed.toml",
+        env_file=BASE_DIR / ".env",
+        extra="ignore",
+    )
+
+    pipeline: PipelineSettings = PipelineSettings()
+    llm: LLMSettings = LLMSettings()
     prompt: PromptSettings
 
+    # Secrets from .env
+    sender_gmail: str = ""
+    gmail_app_password: str = ""
+    receiver_email: str = ""
 
-def load_settings(toml_path: Path | None = None) -> Settings:
-    """Load settings from ttsfeed.toml.
-
-    Args:
-        toml_path: Path to config file. Defaults to ``ttsfeed.toml`` in the repo root.
-
-    Returns:
-        Populated :class:`Settings` dataclass.
-
-    Raises:
-        FileNotFoundError: If the TOML file does not exist.
-        tomllib.TOMLDecodeError: If the file is not valid TOML.
-        KeyError: If a required key is missing from the file.
-    """
-    if toml_path is None:
-        toml_path = BASE_DIR / "ttsfeed.toml"
-
-    with open(toml_path, "rb") as f:
-        raw = tomllib.load(f)
-
-    pipeline_raw = raw["pipeline"]
-    pipeline = PipelineSettings(
-        hours=int(pipeline_raw["hours"]),
-        log_level=pipeline_raw["log_level"],
-        schedule=pipeline_raw.get("schedule", "0 23 * * *"),
-    )
-
-    llm_raw = raw["llm"]
-    llm = LLMSettings(
-        provider=llm_raw["provider"],
-        models=list(llm_raw["models"]),
-        api_kwargs=dict(llm_raw.get("api_kwargs", {})),
-    )
-
-    prompt_raw = raw["prompt"]
-    prompt = PromptSettings(
-        template=prompt_raw["template"],
-        categories=prompt_raw["categories"],
-    )
-
-    return Settings(pipeline=pipeline, llm=llm, prompt=prompt)
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (init_settings, env_settings, dotenv_settings, TomlConfigSettingsSource(settings_cls), file_secret_settings)
 
 
-settings = load_settings()
+settings = Settings()
 
-# --- Email notification (secrets from .env) ---
-
-SENDER_GMAIL = os.getenv("SENDER_GMAIL", "")
-GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
-RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL", "")
-
-if SENDER_GMAIL and not SENDER_GMAIL.endswith("@gmail.com"):
+if settings.sender_gmail and not settings.sender_gmail.endswith("@gmail.com"):
     logger.warning(
-        "SENDER_GMAIL=%r does not end with @gmail.com; SMTP login will likely fail",
-        SENDER_GMAIL,
+        "sender_gmail=%r does not end with @gmail.com; SMTP login will likely fail",
+        settings.sender_gmail,
     )
