@@ -7,7 +7,6 @@ from collections.abc import Callable
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -20,7 +19,7 @@ NotifyFn = Callable[[pd.Timestamp, list[dict], "EnrichResult | None"], None]
 
 logger = logging.getLogger(__name__)
 
-_TEMPLATES_DIR = Path(__file__).parent / "templates"
+_TEMPLATES_DIR = settings.paths.templates_dir
 
 
 def _media_type(url: str) -> str:
