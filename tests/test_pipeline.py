@@ -34,12 +34,15 @@ def test_main_no_llm_saves_once(mocker):
     mock_download.assert_called_once()
     mock_parse.assert_called_once_with(b"raw")
     mock_filter.assert_called_once_with(mock_df, hours=24)
-    mock_save.assert_called_once_with(
-        mock_df,
-        total_archive=len(mock_df),
-        reference_time=mock_now,
-        output_path=settings.paths.raw_output_dir / "2025-06-15.json",
-    )
+    # save_output now receives list[dict], not DataFrame
+    mock_save.assert_called_once()
+    call_args = mock_save.call_args
+    assert isinstance(call_args.args[0], list)
+    assert call_args.kwargs == {
+        "total_archive": len(mock_df),
+        "reference_time": mock_now,
+        "output_path": settings.paths.raw_output_dir / "2025-06-15.json",
+    }
 
 
 def test_main_with_llm_saves_twice(mocker):
@@ -68,19 +71,20 @@ def test_main_with_llm_saves_twice(mocker):
     assert mock_save.call_count == 2
     first_call = mock_save.call_args_list[0]
     second_call = mock_save.call_args_list[1]
+    # Both calls now receive list[dict] as first arg
+    assert isinstance(first_call.args[0], list)
     assert first_call.kwargs == {
         "total_archive": len(mock_df),
         "reference_time": mock_now,
         "output_path": settings.paths.raw_output_dir / "2025-06-15.json",
     }
-    assert first_call.args == (mock_df,)
+    assert isinstance(second_call.args[0], list)
     assert second_call.kwargs == {
         "total_archive": len(mock_df),
         "reference_time": mock_now,
         "enrichment": enrichment,
         "output_path": settings.paths.enriched_output_dir / "2025-06-15.json",
     }
-    assert second_call.args == (mock_df,)
 
 
 def test_main_llm_failure_saves_once(mocker):
@@ -103,12 +107,14 @@ def test_main_llm_failure_saves_once(mocker):
 
     main()
 
-    mock_save.assert_called_once_with(
-        mock_df,
-        total_archive=len(mock_df),
-        reference_time=mock_now,
-        output_path=settings.paths.raw_output_dir / "2025-06-15.json",
-    )
+    mock_save.assert_called_once()
+    call_args = mock_save.call_args
+    assert isinstance(call_args.args[0], list)
+    assert call_args.kwargs == {
+        "total_archive": len(mock_df),
+        "reference_time": mock_now,
+        "output_path": settings.paths.raw_output_dir / "2025-06-15.json",
+    }
 
 
 def test_main_exits_on_fetch_failure(mocker):

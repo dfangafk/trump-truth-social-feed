@@ -1,10 +1,11 @@
 """Configuration constants and settings loader for the Truth Social data pipeline."""
 
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -114,7 +115,15 @@ class Settings(BaseSettings):
         return (init_settings, env_settings, dotenv_settings, TomlConfigSettingsSource(settings_cls), file_secret_settings)
 
 
-settings = Settings()
+try:
+    settings = Settings()
+except (ValidationError, FileNotFoundError, Exception) as exc:
+    logger.error(
+        "Failed to load settings — check settings.toml and .env at %s: %s",
+        BASE_DIR,
+        exc,
+    )
+    sys.exit(1)
 
 if settings.sender_gmail and not settings.sender_gmail.endswith("@gmail.com"):
     logger.warning(
