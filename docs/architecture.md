@@ -133,7 +133,7 @@ at module import time; the result is exposed as the module-level `settings` sing
 | Dataclass         | Fields                                                         |
 |-------------------|----------------------------------------------------------------|
 | `LLMSettings`     | `provider`, `models`, `api_kwargs: dict[str, Any]` — open passthrough dict forwarded directly to `litellm.completion()`; any litellm kwarg accepted; defaults to `{"num_retries": 3}` |
-| `PipelineSettings`| `hours`, `log_level`, `schedule` (informational)              |
+| `PipelineSettings`| `hours`, `log_level`, `schedule` (informational), `save_raw` (bool, default `False`), `save_enriched` (bool, default `False`), `save_logs` (bool, default `False`) — the three save flags can be disabled via `ttsfeed.toml` or env vars (`PIPELINE__SAVE_RAW=false`, etc.) |
 | `PromptSettings`  | `template`, `categories` — both have hardcoded defaults so the pipeline works without `ttsfeed.toml` |
 | `Settings`        | `pipeline`, `llm`, `prompt`                                   |
 

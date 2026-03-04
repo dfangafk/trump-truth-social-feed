@@ -30,7 +30,8 @@ def _add_file_handler(run_date) -> None:
 def main(notify_fn: NotifyFn | None = None) -> None:
     t0 = pd.Timestamp.now("UTC")
     run_date = t0.date()
-    _add_file_handler(run_date)
+    if settings.pipeline.save_logs:
+        _add_file_handler(run_date)
     logger.info("Pipeline start")
 
     try:
@@ -48,12 +49,13 @@ def main(notify_fn: NotifyFn | None = None) -> None:
     enriched_path = settings.paths.enriched_output_dir / f"{run_date.isoformat()}.json"
     logger.info("Run date: %s", run_date)
 
-    save_output(
-        new_posts_df,
-        total_archive=len(df),
-        reference_time=reference_time,
-        output_path=raw_path,
-    )
+    if settings.pipeline.save_raw:
+        save_output(
+            new_posts_df,
+            total_archive=len(df),
+            reference_time=reference_time,
+            output_path=raw_path,
+        )
 
     new_posts = [post_to_dict(row) for _, row in new_posts_df.iterrows()]
     enrichment = None
@@ -66,13 +68,14 @@ def main(notify_fn: NotifyFn | None = None) -> None:
                 "Enrichment complete: %d categorized posts",
                 len(enrichment.post_categories),
             )
-            save_output(
-                new_posts_df,
-                total_archive=len(df),
-                reference_time=reference_time,
-                enrichment=enrichment,
-                output_path=enriched_path,
-            )
+            if settings.pipeline.save_enriched:
+                save_output(
+                    new_posts_df,
+                    total_archive=len(df),
+                    reference_time=reference_time,
+                    enrichment=enrichment,
+                    output_path=enriched_path,
+                )
 
         except Exception:
             logger.warning("LLM enrichment failed; skipping", exc_info=True)
