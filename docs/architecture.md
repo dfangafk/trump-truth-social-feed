@@ -182,7 +182,7 @@ for installs that do not include the TOML file.
 
 | Export                  | Role                                            |
 |-------------------------|-------------------------------------------------|
-| `ENRICHMENT_SCHEMA`     | JSON schema string enforcing `{"summary": ..., "posts": [...]}` response format; shared with `llm.py` CLI providers |
+| `_CLI_OUTPUT_SCHEMA`    | (in `llm.py`) JSON schema string enforcing `{"summary": ..., "posts": [...]}` response format; used by CLI providers |
 | `EnrichResult`          | Dataclass: `daily_summary: str`, `post_categories: dict[str, list[str]]`, `post_is_reblog: dict[str, bool]` |
 | `_is_reblog(post)`      | Returns `True` if `content` starts with `"RT "` |
 | `_has_content(post)`    | Returns `True` if `content.strip()` is non-empty |
@@ -209,7 +209,7 @@ The `complete` callable is injected by `pipeline.py` (obtained from `llm.build_c
 | `_call_claude_cli(prompt)` | Invokes `claude -p` headless CLI with `--output-format json` + `--json-schema`; returns `structured_output` as JSON string |
 | `_call_codex_cli(prompt)` | Invokes `codex exec` headless CLI with `--ephemeral`, `--full-auto`, and `--output-schema`; returns stdout JSON string |
 
-`LLM_PROVIDER` controls which provider is used: `api`, `claude_code_cli`, `codex_cli`, or `auto` (default). `llm.py` reads `LLM_PROVIDER` and `LLM_MODELS` from `config.py`, where they are loaded from `.env`/environment at startup. `llm.py` imports `ENRICHMENT_SCHEMA` from `analyze.py` (domain knowledge co-located with `_PROMPT_TEMPLATE`). In `api` mode, `LLM_MODELS` must be set (e.g. `'["gemini/gemini-2.5-flash","openai/gpt-4o"]'`) and models are tried in order; LiteLLM reads credentials from environment variables such as `GEMINI_API_KEY` and `OPENAI_API_KEY`. `claude_code_cli` and `codex_cli` target their CLIs (`claude -p` and `codex exec`) in headless/non-interactive operation, intended for local testing. In `auto`, selection falls back API → Claude CLI → Codex CLI. If the requested provider is unavailable, `build_complete_fn()` returns `None` and enrichment is skipped.
+`LLM_PROVIDER` controls which provider is used: `api`, `claude_code_cli`, `codex_cli`, or `auto` (default). `llm.py` reads `LLM_PROVIDER` and `LLM_MODELS` from `config.py`, where they are loaded from `.env`/environment at startup. `llm.py` defines `_CLI_OUTPUT_SCHEMA` internally (JSON schema for structured CLI output). In `api` mode, `LLM_MODELS` must be set (e.g. `'["gemini/gemini-2.5-flash","openai/gpt-4o"]'`) and models are tried in order; LiteLLM reads credentials from environment variables such as `GEMINI_API_KEY` and `OPENAI_API_KEY`. `claude_code_cli` and `codex_cli` target their CLIs (`claude -p` and `codex exec`) in headless/non-interactive operation, intended for local testing. In `auto`, selection falls back API → Claude CLI → Codex CLI. If the requested provider is unavailable, `build_complete_fn()` returns `None` and enrichment is skipped.
 
 ### `notify.py` — Email Notification
 

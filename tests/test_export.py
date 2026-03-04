@@ -59,10 +59,15 @@ def testpost_to_dict_none_media():
 # --- save_output ---
 
 
+def _posts_from_df(df: pd.DataFrame) -> list[dict]:
+    """Convert a DataFrame to a list of post dicts for save_output."""
+    return [post_to_dict(row) for _, row in df.iterrows()]
+
+
 def test_save_output_creates_json(tmp_path, monkeypatch, sample_df):
     monkeypatch.setattr(settings.paths, "enriched_output_dir", tmp_path)
 
-    new_posts = sample_df.iloc[1:]  # 2 "new" posts
+    new_posts = _posts_from_df(sample_df.iloc[1:])  # 2 "new" posts
     save_output(new_posts, total_archive=3, hours=24, reference_time=REF_TIME)
 
     today_str = REF_TIME.date().isoformat()
@@ -77,8 +82,7 @@ def test_save_output_creates_json(tmp_path, monkeypatch, sample_df):
 def test_save_output_zero_new_posts(tmp_path, monkeypatch, sample_df):
     monkeypatch.setattr(settings.paths, "enriched_output_dir", tmp_path)
 
-    empty = sample_df.iloc[0:0]
-    save_output(empty, total_archive=5, hours=24, reference_time=REF_TIME)
+    save_output([], total_archive=5, hours=24, reference_time=REF_TIME)
 
     today_str = REF_TIME.date().isoformat()
     data = json.loads((tmp_path / f"{today_str}.json").read_text())
@@ -91,7 +95,7 @@ def test_save_output_with_enrichment_embeds_per_post_categories(
 ):
     monkeypatch.setattr(settings.paths, "enriched_output_dir", tmp_path)
 
-    new_posts = sample_df.iloc[1:]
+    new_posts = _posts_from_df(sample_df.iloc[1:])
     enrichment = EnrichResult(
         daily_summary="Summary text",
         post_categories={"200": ["immigration"], "300": ["economy / trade"]},
@@ -118,7 +122,7 @@ def test_save_output_without_enrichment_posts_have_no_categories(
 ):
     monkeypatch.setattr(settings.paths, "enriched_output_dir", tmp_path)
 
-    new_posts = sample_df.iloc[1:]
+    new_posts = _posts_from_df(sample_df.iloc[1:])
     save_output(new_posts, total_archive=3, hours=24, reference_time=REF_TIME)
 
     today_str = REF_TIME.date().isoformat()
@@ -129,7 +133,7 @@ def test_save_output_without_enrichment_posts_have_no_categories(
 def test_save_output_with_explicit_output_name(tmp_path, monkeypatch, sample_df):
     monkeypatch.setattr(settings.paths, "enriched_output_dir", tmp_path)
 
-    new_posts = sample_df.iloc[1:]
+    new_posts = _posts_from_df(sample_df.iloc[1:])
     save_output(
         new_posts,
         total_archive=3,

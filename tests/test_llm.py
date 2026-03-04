@@ -7,7 +7,7 @@ import subprocess
 import pytest
 
 import ttsfeed.llm
-from ttsfeed.analyze import ENRICHMENT_SCHEMA
+from ttsfeed.llm import _CLI_OUTPUT_SCHEMA
 from ttsfeed.llm import (
     _call_claude_cli,
     _call_codex_cli,
@@ -170,7 +170,7 @@ def test_call_codex_cli_success(mocker):
     assert "test prompt" in call_args
     schema_path = call_args[call_args.index("--output-schema") + 1]
     assert json.loads(Path(schema_path).read_text(encoding="utf-8")) == json.loads(
-        ENRICHMENT_SCHEMA
+        _CLI_OUTPUT_SCHEMA
     )
     mock_unlink.assert_called_once_with(schema_path)
     Path(schema_path).unlink(missing_ok=True)

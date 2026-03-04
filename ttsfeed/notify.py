@@ -1,5 +1,6 @@
 """Email notification: send daily digest after pipeline completes."""
 
+import functools
 import logging
 import smtplib
 import ssl
@@ -19,8 +20,6 @@ NotifyFn = Callable[[pd.Timestamp, list[dict], "EnrichResult | None"], None]
 
 logger = logging.getLogger(__name__)
 
-_TEMPLATES_DIR = settings.paths.templates_dir
-
 
 def _media_type(url: str) -> str:
     """Return 'video' for .mp4 URLs, 'image' for everything else."""
@@ -31,9 +30,13 @@ def _to_et_display(created_at: str) -> str:
     """Convert UTC ISO timestamp to display timezone string like 'Feb 21, 2026, 9:32 AM'."""
     tz = ZoneInfo(settings.notify.timezone)
     dt = datetime.fromisoformat(created_at).astimezone(tz)
-    hour = dt.hour % 12 or 12
-    ampm = "AM" if dt.hour < 12 else "PM"
-    return f"{dt.strftime('%b')} {dt.day}, {dt.year}, {hour}:{dt.strftime('%M')} {ampm}"
+    return f"{dt.strftime('%b')} {dt.day}, {dt.year}, {dt.hour % 12 or 12}:{dt.strftime('%M')} {'AM' if dt.hour < 12 else 'PM'}"
+
+
+@functools.lru_cache(maxsize=2)
+def _get_jinja_env(templates_dir: str, autoescape: bool) -> Environment:
+    """Return a cached Jinja2 Environment for the given directory and autoescape mode."""
+    return Environment(loader=FileSystemLoader(templates_dir), autoescape=autoescape)
 
 
 def send_notification(
@@ -117,11 +120,11 @@ def build_template_context(
 
 def render_text(ctx: dict) -> str:
     """Render the plain-text template with the given context."""
-    env = Environment(loader=FileSystemLoader(_TEMPLATES_DIR), autoescape=False)
+    env = _get_jinja_env(str(settings.paths.templates_dir), autoescape=False)
     return env.get_template("digest.txt.jinja2").render(**ctx)
 
 
 def render_html(ctx: dict) -> str:
     """Render the HTML template with the given context."""
-    env = Environment(loader=FileSystemLoader(_TEMPLATES_DIR), autoescape=True)
+    env = _get_jinja_env(str(settings.paths.templates_dir), autoescape=True)
     return env.get_template("digest.html.jinja2").render(**ctx)
