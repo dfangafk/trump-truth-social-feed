@@ -75,6 +75,7 @@ class PathSettings(BaseModel):
     raw_output_dir: Path = BASE_DIR / "data" / "raw"
     enriched_output_dir: Path = BASE_DIR / "data" / "enriched"
     logs_output_dir: Path = BASE_DIR / "data" / "logs"
+    templates_dir: Path = BASE_DIR / "ttsfeed" / "templates"
 
 
 class Settings(BaseSettings):
