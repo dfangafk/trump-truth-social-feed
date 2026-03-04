@@ -78,10 +78,10 @@ trump-truth-social-feed/
 ┌──────────────────────┐  ┌─────────────────────────────────┐
 │       export.py      │  │           config.py              │
 │                      │  │                                  │
-│ _post_to_dict()      │  │ ARCHIVE_URL_JSON                 │
-│   ↓                  │  │ TRUTH_SOCIAL_PROFILE_URL         │
-│ save_output()        │  │ RAW_OUTPUT_DIR, ENRICHED_OUTPUT_DIR │
-│                      │  │ settings (LLM/prompt/pipeline)   │
+│ _post_to_dict()      │  │ TRUTH_SOCIAL_PROFILE_URL         │
+│   ↓                  │  │ settings (fetch/notify/pipeline/ │
+│ save_output()        │  │   llm/prompt/paths)              │
+│                      │  │                                  │
 └──────────────────────┘  └──────────────────────────────────┘
 ```
 
@@ -132,13 +132,15 @@ at module import time; the result is exposed as the module-level `settings` sing
 
 | Dataclass         | Fields                                                         |
 |-------------------|----------------------------------------------------------------|
+| `FetchSettings`   | `archive_url` (CNN archive URL), `timeout` (HTTP timeout, default 120s), `user_agent` |
+| `NotifySettings`  | `timezone` (default `America/New_York`), `smtp_host` (default `smtp.gmail.com`), `smtp_port` (default 465), `subject_template` (Python `.format()` template with `{date}` and `{count}` placeholders) |
 | `LLMSettings`     | `provider`, `models`, `api_kwargs: dict[str, Any]` — open passthrough dict forwarded directly to `litellm.completion()`; any litellm kwarg accepted; defaults to `{"num_retries": 3}` |
 | `PipelineSettings`| `hours`, `log_level`, `schedule` (informational), `save_raw` (bool, default `False`), `save_enriched` (bool, default `False`), `save_logs` (bool, default `False`) — the three save flags can be disabled via `settings.toml` or env vars (`PIPELINE__SAVE_RAW=false`, etc.) |
 | `PromptSettings`  | `template`, `categories` — both have hardcoded defaults so the pipeline works without `settings.toml` |
-| `Settings`        | `pipeline`, `llm`, `prompt`                                   |
+| `Settings`        | `fetch`, `notify`, `pipeline`, `llm`, `prompt`, `paths`       |
 
 **`settings.toml`** — ships with the repo as the reference config. Contains all tunable
-behavior (`[pipeline]`, `[llm]`, `[llm.api_kwargs]`, `[prompt]`). Secrets (API keys, SMTP
+behavior (`[fetch]`, `[notify]`, `[pipeline]`, `[llm]`, `[llm.api_kwargs]`, `[prompt]`). Secrets (API keys, SMTP
 credentials) stay in `.env` and are never committed. Categories and the prompt template are
 defined under `[prompt]` in the TOML file, with hardcoded fallback defaults in `PromptSettings`
 for installs that do not include the TOML file.
@@ -147,7 +149,6 @@ for installs that do not include the TOML file.
 
 | Export                    | Description                              |
 |---------------------------|------------------------------------------|
-| `ARCHIVE_URL_JSON`        | CNN archive URL (JSON format)            |
 | `TRUTH_SOCIAL_PROFILE_URL`| Truth Social profile URL                 |
 | `BASE_DIR`                | Repository root                          |
 | `RAW_OUTPUT_DIR`          | `data/raw/`                              |
@@ -223,7 +224,10 @@ Subject: `Trump Truth Social — YYYY-MM-DD (N new posts)`. Body includes date, 
 
 ```bash
 uv run python -m ttsfeed.pipeline   # run for today (enrichment if API model, claude CLI, or codex CLI available)
+uv run python -m ttsfeed.pipeline --hours 48 --save-raw --log-level DEBUG  # CLI overrides
 ```
+
+CLI flags (`--hours`, `--log-level`, `--save-raw`, `--save-enriched`, `--save-logs`) are parsed by `cli()` and applied to the `settings` singleton before calling `main()`. The `ttsfeed` console script entry point invokes `cli()`.
 
 `main(notify_fn: NotifyFn | None = None)` accepts an optional `notify_fn` callback matching `NotifyFn` from `ttsfeed.notify`. When provided, it is called instead of the built-in `send_notification`. Pass `None` (the default) to retain the standard Gmail SMTP behavior. This allows downstream repos to substitute their own notification logic (e.g. Resend-based dispatch) without modifying this package.
 

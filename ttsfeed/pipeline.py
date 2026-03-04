@@ -1,5 +1,6 @@
 """Orchestrator: fetch + filter + analyze (single entry point)."""
 
+import argparse
 import logging
 import sys
 
@@ -95,5 +96,51 @@ def main(notify_fn: NotifyFn | None = None) -> None:
     notifier(reference_time, new_posts, enrichment)
 
 
-if __name__ == "__main__":
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse CLI arguments for one-off pipeline overrides."""
+    parser = argparse.ArgumentParser(
+        description="Run the Truth Social feed pipeline.",
+    )
+    parser.add_argument(
+        "--hours", type=int, default=None,
+        help="Override look-back window (hours)",
+    )
+    parser.add_argument(
+        "--log-level", type=str, default=None,
+        help="Override log level (DEBUG, INFO, WARNING, ERROR)",
+    )
+    parser.add_argument(
+        "--save-raw", action="store_true", default=False,
+        help="Write raw JSON to data/raw/",
+    )
+    parser.add_argument(
+        "--save-enriched", action="store_true", default=False,
+        help="Write enriched JSON to data/enriched/",
+    )
+    parser.add_argument(
+        "--save-logs", action="store_true", default=False,
+        help="Write log file to data/logs/",
+    )
+    return parser.parse_args(argv)
+
+
+def cli(argv: list[str] | None = None) -> None:
+    """Entry point for the ``ttsfeed`` console script and ``__main__``."""
+    args = _parse_args(argv)
+
+    if args.hours is not None:
+        settings.pipeline.hours = args.hours
+    if args.log_level is not None:
+        settings.pipeline.log_level = args.log_level
+    if args.save_raw:
+        settings.pipeline.save_raw = True
+    if args.save_enriched:
+        settings.pipeline.save_enriched = True
+    if args.save_logs:
+        settings.pipeline.save_logs = True
+
     main()
+
+
+if __name__ == "__main__":
+    cli()

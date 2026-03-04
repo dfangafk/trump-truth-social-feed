@@ -6,17 +6,17 @@ import logging
 import pandas as pd
 import requests
 
-from ttsfeed.config import ARCHIVE_URL_JSON
+from ttsfeed.config import settings
 
 logger = logging.getLogger(__name__)
-
-HTTP_HEADERS = {"User-Agent": "ttsfeed/0.1 (Truth Social archive tracker)"}
 
 
 def download_archive() -> bytes:
     """Download the JSON archive. Returns raw bytes."""
-    logger.info("Downloading archive from %s", ARCHIVE_URL_JSON)
-    resp = requests.get(ARCHIVE_URL_JSON, timeout=120, headers=HTTP_HEADERS)
+    url = settings.fetch.archive_url
+    headers = {"User-Agent": settings.fetch.user_agent}
+    logger.info("Downloading archive from %s", url)
+    resp = requests.get(url, timeout=settings.fetch.timeout, headers=headers)
     resp.raise_for_status()
     logger.info("Downloaded %.2f MB", len(resp.content) / 1_000_000)
     return resp.content

@@ -9,6 +9,16 @@ save_raw = false       # write data/raw/
 save_enriched = false  # write data/enriched/
 save_logs = false      # write data/logs/
 
+[fetch]
+archive_url = "https://ix.cnn.io/data/truth-social/truth_archive.json"
+timeout = 120
+
+[notify]
+timezone = "America/New_York"
+smtp_host = "smtp.gmail.com"
+smtp_port = 465
+subject_template = "Trump Truth Social Feed — {date} ({count} new posts)"
+
 [llm]
 provider = "auto"    # auto | api | claude_code_cli | codex_cli
 models = [

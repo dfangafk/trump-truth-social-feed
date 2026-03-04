@@ -21,7 +21,6 @@ NotifyFn = Callable[[pd.Timestamp, list[dict], "EnrichResult | None"], None]
 logger = logging.getLogger(__name__)
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
-_ET = ZoneInfo("America/New_York")
 
 
 def _media_type(url: str) -> str:
@@ -30,8 +29,9 @@ def _media_type(url: str) -> str:
 
 
 def _to_et_display(created_at: str) -> str:
-    """Convert UTC ISO timestamp to Eastern Time display string like 'Feb 21, 2026, 9:32 AM'."""
-    dt = datetime.fromisoformat(created_at).astimezone(_ET)
+    """Convert UTC ISO timestamp to display timezone string like 'Feb 21, 2026, 9:32 AM'."""
+    tz = ZoneInfo(settings.notify.timezone)
+    dt = datetime.fromisoformat(created_at).astimezone(tz)
     hour = dt.hour % 12 or 12
     ampm = "AM" if dt.hour < 12 else "PM"
     return f"{dt.strftime('%b')} {dt.day}, {dt.year}, {hour}:{dt.strftime('%M')} {ampm}"
@@ -51,10 +51,11 @@ def send_notification(
         logger.info("Email notification skipped (sender_gmail/gmail_app_password/receiver_email not set)")
         return
 
-    date_str = reference_time.astimezone(_ET).date().isoformat()
+    tz = ZoneInfo(settings.notify.timezone)
+    date_str = reference_time.astimezone(tz).date().isoformat()
     post_count = len(new_posts)
 
-    subject = f"Trump Truth Social Feed \u2014 {date_str} ({post_count} new posts)"
+    subject = settings.notify.subject_template.format(date=date_str, count=post_count)
     ctx = build_template_context(date_str, new_posts, enrichment)
     text_body = render_text(ctx)
     html_body = render_html(ctx)
@@ -68,7 +69,7 @@ def send_notification(
 
     try:
         context = ssl.create_default_context()
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        with smtplib.SMTP_SSL(settings.notify.smtp_host, settings.notify.smtp_port, context=context) as server:
             server.login(settings.sender_gmail, settings.gmail_app_password)
             server.send_message(msg)
         logger.info("Notification email sent to %s", settings.receiver_email)
