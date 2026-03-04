@@ -3,6 +3,7 @@
 import logging
 import smtplib
 import ssl
+from collections.abc import Callable
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -14,6 +15,8 @@ from jinja2 import Environment, FileSystemLoader
 
 from ttsfeed.analyze import EnrichResult
 from ttsfeed.config import settings
+
+NotifyFn = Callable[[pd.Timestamp, list[dict], "EnrichResult | None"], None]
 
 logger = logging.getLogger(__name__)
 
