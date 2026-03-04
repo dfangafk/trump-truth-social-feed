@@ -62,10 +62,10 @@ class PathSettings(BaseModel):
 
 
 class Settings(BaseSettings):
-    """All tunable settings for ttsfeed, loaded from ttsfeed.toml and .env."""
+    """All tunable settings for ttsfeed, loaded from settings.toml and .env."""
 
     model_config = SettingsConfigDict(
-        toml_file=BASE_DIR / "ttsfeed.toml",
+        toml_file=BASE_DIR / "settings.toml",
         env_file=BASE_DIR / ".env",
         extra="ignore",
     )
