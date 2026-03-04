@@ -33,6 +33,12 @@ def main(notify_fn: NotifyFn | None = None) -> None:
     if settings.pipeline.save_logs:
         _add_file_handler(run_date)
     logger.info("Pipeline start")
+    logger.info(
+        "Save flags — raw: %s, enriched: %s, logs: %s",
+        settings.pipeline.save_raw,
+        settings.pipeline.save_enriched,
+        settings.pipeline.save_logs,
+    )
 
     try:
         raw = download_archive()
