@@ -9,7 +9,7 @@ A daily pipeline that downloads Trump's Truth Social archive from CNN, filters p
 ```
 trump-truth-social-feed/
 ├── pyproject.toml          # Dependencies, entry point, build config
-├── ttsfeed.toml            # User-editable behavior settings (version-controlled)
+├── settings.toml           # User-editable behavior settings (version-controlled)
 ├── .env                    # Secrets only — never committed (API keys, email creds)
 ├── ttsfeed/                # Main package
 │   ├── __init__.py
@@ -127,17 +127,17 @@ _write_run_summary()        ← [always] write run log to data/logs/YYYY-MM-DD.j
 ### `config.py` — Settings Dataclasses, TOML Loader & Constants
 
 Settings live in `config.py` (no separate `settings.py` module). `load_settings()` reads
-`ttsfeed.toml` at the repo root using `tomllib` (stdlib, Python 3.11+) and is called once
+`settings.toml` at the repo root using `tomllib` (stdlib, Python 3.11+) and is called once
 at module import time; the result is exposed as the module-level `settings` singleton.
 
 | Dataclass         | Fields                                                         |
 |-------------------|----------------------------------------------------------------|
 | `LLMSettings`     | `provider`, `models`, `api_kwargs: dict[str, Any]` — open passthrough dict forwarded directly to `litellm.completion()`; any litellm kwarg accepted; defaults to `{"num_retries": 3}` |
-| `PipelineSettings`| `hours`, `log_level`, `schedule` (informational), `save_raw` (bool, default `False`), `save_enriched` (bool, default `False`), `save_logs` (bool, default `False`) — the three save flags can be disabled via `ttsfeed.toml` or env vars (`PIPELINE__SAVE_RAW=false`, etc.) |
-| `PromptSettings`  | `template`, `categories` — both have hardcoded defaults so the pipeline works without `ttsfeed.toml` |
+| `PipelineSettings`| `hours`, `log_level`, `schedule` (informational), `save_raw` (bool, default `False`), `save_enriched` (bool, default `False`), `save_logs` (bool, default `False`) — the three save flags can be disabled via `settings.toml` or env vars (`PIPELINE__SAVE_RAW=false`, etc.) |
+| `PromptSettings`  | `template`, `categories` — both have hardcoded defaults so the pipeline works without `settings.toml` |
 | `Settings`        | `pipeline`, `llm`, `prompt`                                   |
 
-**`ttsfeed.toml`** — ships with the repo as the reference config. Contains all tunable
+**`settings.toml`** — ships with the repo as the reference config. Contains all tunable
 behavior (`[pipeline]`, `[llm]`, `[llm.api_kwargs]`, `[prompt]`). Secrets (API keys, SMTP
 credentials) stay in `.env` and are never committed. Categories and the prompt template are
 defined under `[prompt]` in the TOML file, with hardcoded fallback defaults in `PromptSettings`
