@@ -5,6 +5,9 @@
 hours = 24           # look-back window for new posts (hours)
 log_level = "INFO"   # DEBUG | INFO | WARNING | ERROR
 # schedule = "0 12 * * *"  # informational only — also update .github/workflows/daily_ingest.yml to match
+save_raw = false       # write data/raw/
+save_enriched = false  # write data/enriched/
+save_logs = false      # write data/logs/
 
 [llm]
 provider = "auto"    # auto | api | claude_code_cli | codex_cli
