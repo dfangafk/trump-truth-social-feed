@@ -1,6 +1,7 @@
 """Orchestrator: fetch + filter + analyze (single entry point)."""
 
 import argparse
+import datetime
 import logging
 import sys
 
@@ -19,7 +20,7 @@ logging.basicConfig(level=_log_level, format=_LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 
-def _add_file_handler(run_date) -> None:
+def _add_file_handler(run_date: datetime.date) -> None:
     """Attach a date-stamped FileHandler to the root logger."""
     settings.paths.logs_output_dir.mkdir(parents=True, exist_ok=True)
     log_file = settings.paths.logs_output_dir / f"{run_date.isoformat()}.log"
@@ -28,17 +29,31 @@ def _add_file_handler(run_date) -> None:
     logging.getLogger().addHandler(file_handler)
 
 
-def main(notify_fn: NotifyFn | None = None) -> None:
+def main(
+    notify_fn: NotifyFn | None = None,
+    *,
+    hours: int | None = None,
+    log_level: str | None = None,
+    save_raw: bool | None = None,
+    save_enriched: bool | None = None,
+    save_logs: bool | None = None,
+) -> None:
+    # Resolve effective values: CLI overrides take priority over settings.toml
+    hours = hours if hours is not None else settings.pipeline.hours
+    save_raw = save_raw if save_raw is not None else settings.pipeline.save_raw
+    save_enriched = save_enriched if save_enriched is not None else settings.pipeline.save_enriched
+    save_logs = save_logs if save_logs is not None else settings.pipeline.save_logs
+
     t0 = pd.Timestamp.now("UTC")
     run_date = t0.date()
-    if settings.pipeline.save_logs:
+    if save_logs:
         _add_file_handler(run_date)
     logger.info("Pipeline start")
     logger.info(
         "Save flags — raw: %s, enriched: %s, logs: %s",
-        settings.pipeline.save_raw,
-        settings.pipeline.save_enriched,
-        settings.pipeline.save_logs,
+        save_raw,
+        save_enriched,
+        save_logs,
     )
 
     try:
@@ -49,22 +64,24 @@ def main(notify_fn: NotifyFn | None = None) -> None:
         logger.exception("Fetch failed")
         sys.exit(1)
 
-    new_posts_df = filter_recent_posts(df, hours=settings.pipeline.hours)
+    new_posts_df = filter_recent_posts(df, hours=hours)
     logger.info("%d new posts found", len(new_posts_df))
-    reference_time = pd.Timestamp.now("UTC")
     raw_path = settings.paths.raw_output_dir / f"{run_date.isoformat()}.json"
     enriched_path = settings.paths.enriched_output_dir / f"{run_date.isoformat()}.json"
     logger.info("Run date: %s", run_date)
 
-    if settings.pipeline.save_raw:
+    # Build sorted post list once for all consumers
+    sorted_df = new_posts_df.sort_values("created_at", ascending=False)
+    new_posts = [post_to_dict(row) for _, row in sorted_df.iterrows()]
+
+    if save_raw:
         save_output(
-            new_posts_df,
+            new_posts,
             total_archive=len(df),
-            reference_time=reference_time,
+            reference_time=t0,
             output_path=raw_path,
         )
 
-    new_posts = [post_to_dict(row) for _, row in new_posts_df.iterrows()]
     enrichment = None
 
     complete = build_complete_fn()
@@ -75,11 +92,11 @@ def main(notify_fn: NotifyFn | None = None) -> None:
                 "Enrichment complete: %d categorized posts",
                 len(enrichment.post_categories),
             )
-            if settings.pipeline.save_enriched:
+            if save_enriched:
                 save_output(
-                    new_posts_df,
+                    new_posts,
                     total_archive=len(df),
-                    reference_time=reference_time,
+                    reference_time=t0,
                     enrichment=enrichment,
                     output_path=enriched_path,
                 )
@@ -93,7 +110,7 @@ def main(notify_fn: NotifyFn | None = None) -> None:
     logger.info("Pipeline complete in %.1f seconds", elapsed)
 
     notifier = notify_fn if notify_fn is not None else send_notification
-    notifier(reference_time, new_posts, enrichment)
+    notifier(t0, new_posts, enrichment)
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -128,18 +145,13 @@ def cli(argv: list[str] | None = None) -> None:
     """Entry point for the ``ttsfeed`` console script and ``__main__``."""
     args = _parse_args(argv)
 
-    if args.hours is not None:
-        settings.pipeline.hours = args.hours
-    if args.log_level is not None:
-        settings.pipeline.log_level = args.log_level
-    if args.save_raw:
-        settings.pipeline.save_raw = True
-    if args.save_enriched:
-        settings.pipeline.save_enriched = True
-    if args.save_logs:
-        settings.pipeline.save_logs = True
-
-    main()
+    main(
+        hours=args.hours,
+        log_level=args.log_level,
+        save_raw=args.save_raw or None,
+        save_enriched=args.save_enriched or None,
+        save_logs=args.save_logs or None,
+    )
 
 
 if __name__ == "__main__":

@@ -37,7 +37,7 @@ def post_to_dict(row: pd.Series) -> dict:
 
 
 def save_output(
-    new_posts_df: pd.DataFrame,
+    new_posts: list[dict],
     total_archive: int,
     reference_time: pd.Timestamp | None = None,
     hours: int = 24,
@@ -53,9 +53,6 @@ def save_output(
         reference_time = pd.Timestamp.now("UTC")
     resolved = output_path if output_path is not None else settings.paths.enriched_output_dir / f"{reference_time.date().isoformat()}.json"
     resolved.parent.mkdir(parents=True, exist_ok=True)
-
-    sorted_df = new_posts_df.sort_values("created_at", ascending=False)
-    new_posts = [post_to_dict(row) for _, row in sorted_df.iterrows()]
 
     summary: dict = {
         "total_posts_in_archive": total_archive,
@@ -76,11 +73,10 @@ def save_output(
         "new_posts": new_posts,
     }
 
-    path = resolved
-    with open(path, "w") as f:
+    with open(resolved, "w") as f:
         json.dump(result, f, indent=2, ensure_ascii=False, default=str)
 
     if len(new_posts) == 0:
-        logger.info("No new posts — writing empty output to %s", path.name)
+        logger.info("No new posts — writing empty output to %s", resolved.name)
     else:
-        logger.info("Saved output: %s (%d new posts)", path.name, len(new_posts))
+        logger.info("Saved output: %s (%d new posts)", resolved.name, len(new_posts))

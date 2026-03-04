@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from ttsfeed.analyze import EnrichResult
+from ttsfeed.config import settings as real_settings
 from ttsfeed.notify import build_template_context, _media_type, render_text, _to_et_display, send_notification
 
 
@@ -39,6 +40,7 @@ def _patch_creds(mocker, sender="", password="", receiver=""):
     cfg.notify.smtp_host = "smtp.gmail.com"
     cfg.notify.smtp_port = 465
     cfg.notify.subject_template = "Trump Truth Social Feed — {date} ({count} new posts)"
+    cfg.paths.templates_dir = real_settings.paths.templates_dir
     return cfg
 
 

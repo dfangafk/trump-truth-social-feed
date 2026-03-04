@@ -10,10 +10,30 @@ from collections.abc import Callable
 
 from litellm import completion
 
-from ttsfeed.analyze import ENRICHMENT_SCHEMA
 from ttsfeed.config import settings
 
 logger = logging.getLogger(__name__)
+
+_CLI_OUTPUT_SCHEMA: str = json.dumps(
+    {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string"},
+            "posts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "categories": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 1},
+                    },
+                    "required": ["id", "categories"],
+                },
+            },
+        },
+        "required": ["summary", "posts"],
+    }
+)
 
 
 def _call_llm_api(prompt: str) -> str:
@@ -74,11 +94,12 @@ def _call_claude_cli(prompt: str) -> str:
             "--output-format",
             "json",
             "--json-schema",
-            ENRICHMENT_SCHEMA,
+            _CLI_OUTPUT_SCHEMA,
             "--no-session-persistence",
         ],
         capture_output=True,
         text=True,
+        timeout=300,
     )
 
     if result.returncode != 0:
@@ -114,7 +135,7 @@ def _call_codex_cli(prompt: str) -> str:
         suffix=".json",
         delete=False,
     ) as schema_file:
-        schema_file.write(ENRICHMENT_SCHEMA)
+        schema_file.write(_CLI_OUTPUT_SCHEMA)
         schema_path = schema_file.name
 
     try:
@@ -130,6 +151,7 @@ def _call_codex_cli(prompt: str) -> str:
             ],
             capture_output=True,
             text=True,
+            timeout=300,
         )
     finally:
         os.unlink(schema_path)

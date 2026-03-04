@@ -9,28 +9,6 @@ from ttsfeed.config import settings
 
 logger = logging.getLogger(__name__)
 
-ENRICHMENT_SCHEMA: str = json.dumps(
-    {
-        "type": "object",
-        "properties": {
-            "summary": {"type": "string"},
-            "posts": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "id": {"type": "string"},
-                        "categories": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 1},
-                    },
-                    "required": ["id", "categories"],
-                },
-            },
-        },
-        "required": ["summary", "posts"],
-    }
-)
-
-
 def _is_reblog(post: dict) -> bool:
     """Return True if the post is a reblog (starts with 'RT ')."""
     return post.get("content", "").startswith("RT ")
