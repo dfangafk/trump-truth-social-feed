@@ -10,7 +10,7 @@ from ttsfeed.config import settings
 from ttsfeed.export import post_to_dict, save_output
 from ttsfeed.fetch import bytes_to_dataframe, download_archive, filter_recent_posts
 from ttsfeed.llm import build_complete_fn
-from ttsfeed.notify import send_notification
+from ttsfeed.notify import NotifyFn, send_notification
 
 _LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 _log_level = getattr(logging, settings.pipeline.log_level.upper(), logging.INFO)
@@ -27,7 +27,7 @@ def _add_file_handler(run_date) -> None:
     logging.getLogger().addHandler(file_handler)
 
 
-def main() -> None:
+def main(notify_fn: NotifyFn | None = None) -> None:
     t0 = pd.Timestamp.now("UTC")
     run_date = t0.date()
     _add_file_handler(run_date)
@@ -82,7 +82,8 @@ def main() -> None:
     elapsed = (pd.Timestamp.now("UTC") - t0).total_seconds()
     logger.info("Pipeline complete in %.1f seconds", elapsed)
 
-    send_notification(reference_time, new_posts, enrichment)
+    notifier = notify_fn if notify_fn is not None else send_notification
+    notifier(reference_time, new_posts, enrichment)
 
 
 if __name__ == "__main__":
