@@ -21,10 +21,26 @@ DATA_DIR = BASE_DIR / "data"
 
 # --- URL constants ---
 
-ARCHIVE_URL_JSON = "https://ix.cnn.io/data/truth-social/truth_archive.json"
 TRUTH_SOCIAL_PROFILE_URL = "https://truthsocial.com/@realDonaldTrump"
 
 # --- Settings models ---
+
+
+class FetchSettings(BaseModel):
+    """HTTP fetch configuration for the archive download."""
+
+    archive_url: str = "https://ix.cnn.io/data/truth-social/truth_archive.json"
+    timeout: int = 120
+    user_agent: str = "ttsfeed/0.1 (Truth Social archive tracker)"
+
+
+class NotifySettings(BaseModel):
+    """Email notification configuration."""
+
+    timezone: str = "America/New_York"
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 465
+    subject_template: str = "Trump Truth Social Feed — {date} ({count} new posts)"
 
 
 class LLMSettings(BaseModel):
@@ -70,6 +86,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    fetch: FetchSettings = FetchSettings()
+    notify: NotifySettings = NotifySettings()
     pipeline: PipelineSettings = PipelineSettings()
     llm: LLMSettings = LLMSettings()
     prompt: PromptSettings

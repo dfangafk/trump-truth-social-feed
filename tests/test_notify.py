@@ -35,6 +35,10 @@ def _patch_creds(mocker, sender="", password="", receiver=""):
     cfg.sender_gmail = sender
     cfg.gmail_app_password = password
     cfg.receiver_email = receiver
+    cfg.notify.timezone = "America/New_York"
+    cfg.notify.smtp_host = "smtp.gmail.com"
+    cfg.notify.smtp_port = 465
+    cfg.notify.subject_template = "Trump Truth Social Feed — {date} ({count} new posts)"
     return cfg
 
 
