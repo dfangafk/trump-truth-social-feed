@@ -4,10 +4,12 @@ import pandas as pd
 import pytest
 
 from ttsfeed.config import settings
-from ttsfeed.pipeline import main
+from ttsfeed.pipeline import _parse_args, main
 
 
 def test_main_no_llm_saves_once(mocker):
+    mocker.patch.object(settings.pipeline, "save_raw", True)
+    mocker.patch.object(settings.pipeline, "save_enriched", True)
     mock_df = pd.DataFrame({"id": ["1"], "created_at": ["2025-01-15T10:00:00Z"]})
     mock_download = mocker.patch(
         "ttsfeed.pipeline.download_archive",
@@ -41,6 +43,8 @@ def test_main_no_llm_saves_once(mocker):
 
 
 def test_main_with_llm_saves_twice(mocker):
+    mocker.patch.object(settings.pipeline, "save_raw", True)
+    mocker.patch.object(settings.pipeline, "save_enriched", True)
     mock_df = pd.DataFrame({"id": ["1"], "created_at": ["2025-01-15T10:00:00Z"]})
     mocker.patch("ttsfeed.pipeline.download_archive", return_value=b"raw")
     mocker.patch("ttsfeed.pipeline.bytes_to_dataframe", return_value=mock_df)
@@ -80,6 +84,8 @@ def test_main_with_llm_saves_twice(mocker):
 
 
 def test_main_llm_failure_saves_once(mocker):
+    mocker.patch.object(settings.pipeline, "save_raw", True)
+    mocker.patch.object(settings.pipeline, "save_enriched", True)
     mock_df = pd.DataFrame({"id": ["1"], "created_at": ["2025-01-15T10:00:00Z"]})
     mocker.patch("ttsfeed.pipeline.download_archive", return_value=b"raw")
     mocker.patch("ttsfeed.pipeline.bytes_to_dataframe", return_value=mock_df)
@@ -114,3 +120,23 @@ def test_main_exits_on_fetch_failure(mocker):
     with pytest.raises(SystemExit) as exc_info:
         main()
     assert exc_info.value.code == 1
+
+
+def test_parse_args_defaults():
+    """Default args: all None/False."""
+    args = _parse_args([])
+    assert args.hours is None
+    assert args.log_level is None
+    assert args.save_raw is False
+    assert args.save_enriched is False
+    assert args.save_logs is False
+
+
+def test_parse_args_overrides():
+    """CLI flags set the expected values."""
+    args = _parse_args(["--hours", "48", "--log-level", "DEBUG", "--save-raw", "--save-enriched", "--save-logs"])
+    assert args.hours == 48
+    assert args.log_level == "DEBUG"
+    assert args.save_raw is True
+    assert args.save_enriched is True
+    assert args.save_logs is True
