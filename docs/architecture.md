@@ -214,6 +214,7 @@ The `complete` callable is injected by `pipeline.py` (obtained from `llm.build_c
 
 | Export                    | Role                                                              |
 |---------------------------|-------------------------------------------------------------------|
+| `NotifyFn`                | Type alias `Callable[[pd.Timestamp, list[dict], EnrichResult \| None], None]` — use to type-hint custom notifiers. |
 | `send_notification(reference_time, new_posts, enrichment)` | Build and send daily digest email via Gmail SMTP SSL (port 465). Skips silently if `SENDER_GMAIL`, `GMAIL_APP_PASSWORD`, or `RECEIVER_EMAIL` are unset. Catches all send errors and logs as warnings so the pipeline never fails due to email issues. |
 
 Subject: `Trump Truth Social — YYYY-MM-DD (N new posts)`. Body includes date, post count, daily summary (or "Enrichment not available." if enrichment is `None`), and per-post content, categories, and URL.
@@ -224,7 +225,9 @@ Subject: `Trump Truth Social — YYYY-MM-DD (N new posts)`. Body includes date, 
 uv run python -m ttsfeed.pipeline   # run for today (enrichment if API model, claude CLI, or codex CLI available)
 ```
 
-Calls `download_archive()` → `bytes_to_dataframe()` → `filter_recent_posts()` → `save_output(..., output_dir=RAW_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (always) → `build_complete_fn()` → `analyze_posts()` (if `complete` is not `None`) → `save_output(..., enrichment=enrichment, output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (only if enrichment succeeds) → `send_notification()` → `_write_run_summary()` (always, writes `data/logs/YYYY-MM-DD.json`). Exits with code 1 on fetch errors. LLM failures are caught and logged as warnings, while the raw file remains intact. Email send errors are also caught and logged as warnings. Run `LOG_LEVEL` env var controls log verbosity (defaults to `INFO`).
+`main(notify_fn: NotifyFn | None = None)` accepts an optional `notify_fn` callback matching `NotifyFn` from `ttsfeed.notify`. When provided, it is called instead of the built-in `send_notification`. Pass `None` (the default) to retain the standard Gmail SMTP behavior. This allows downstream repos to substitute their own notification logic (e.g. Resend-based dispatch) without modifying this package.
+
+Calls `download_archive()` → `bytes_to_dataframe()` → `filter_recent_posts()` → `save_output(..., output_dir=RAW_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (always) → `build_complete_fn()` → `analyze_posts()` (if `complete` is not `None`) → `save_output(..., enrichment=enrichment, output_dir=ENRICHED_OUTPUT_DIR, output_name="YYYY-MM-DD.json")` (only if enrichment succeeds) → `notifier(reference_time, new_posts, enrichment)` → `_write_run_summary()` (always, writes `data/logs/YYYY-MM-DD.json`). Exits with code 1 on fetch errors. LLM failures are caught and logged as warnings, while the raw file remains intact. Email send errors are also caught and logged as warnings. Run `LOG_LEVEL` env var controls log verbosity (defaults to `INFO`).
 
 ---
 
