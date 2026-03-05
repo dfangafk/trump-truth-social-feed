@@ -224,10 +224,9 @@ Subject: `Trump Truth Social — YYYY-MM-DD (N new posts)`. Body includes date, 
 
 ```bash
 uv run python -m ttsfeed.pipeline   # run for today (enrichment if API model, claude CLI, or codex CLI available)
-uv run python -m ttsfeed.pipeline --hours 48 --save-raw --log-level DEBUG  # CLI overrides
 ```
 
-CLI flags (`--hours`, `--log-level`, `--save-raw`, `--save-enriched`, `--save-logs`) are parsed by `cli()` and applied to the `settings` singleton before calling `main()`. The `ttsfeed` console script entry point invokes `cli()`.
+All pipeline settings (`hours`, `save_raw`, `save_enriched`, `save_logs`, `log_level`) are read from `settings.toml`. The `ttsfeed` console script entry point invokes `main()` directly.
 
 `main(notify_fn: NotifyFn | None = None)` accepts an optional `notify_fn` callback matching `NotifyFn` from `ttsfeed.notify`. When provided, it is called instead of the built-in `send_notification`. Pass `None` (the default) to retain the standard Gmail SMTP behavior. This allows downstream repos to substitute their own notification logic (e.g. Resend-based dispatch) without modifying this package.
 

@@ -1,6 +1,5 @@
 """Orchestrator: fetch + filter + analyze (single entry point)."""
 
-import argparse
 import datetime
 import logging
 import sys
@@ -29,31 +28,17 @@ def _add_file_handler(run_date: datetime.date) -> None:
     logging.getLogger().addHandler(file_handler)
 
 
-def main(
-    notify_fn: NotifyFn | None = None,
-    *,
-    hours: int | None = None,
-    log_level: str | None = None,
-    save_raw: bool | None = None,
-    save_enriched: bool | None = None,
-    save_logs: bool | None = None,
-) -> None:
-    # Resolve effective values: CLI overrides take priority over settings.toml
-    hours = hours if hours is not None else settings.pipeline.hours
-    save_raw = save_raw if save_raw is not None else settings.pipeline.save_raw
-    save_enriched = save_enriched if save_enriched is not None else settings.pipeline.save_enriched
-    save_logs = save_logs if save_logs is not None else settings.pipeline.save_logs
-
+def main(notify_fn: NotifyFn | None = None) -> None:
     t0 = pd.Timestamp.now("UTC")
     run_date = t0.date()
-    if save_logs:
+    if settings.pipeline.save_logs:
         _add_file_handler(run_date)
     logger.info("Pipeline start")
     logger.info(
         "Save flags — raw: %s, enriched: %s, logs: %s",
-        save_raw,
-        save_enriched,
-        save_logs,
+        settings.pipeline.save_raw,
+        settings.pipeline.save_enriched,
+        settings.pipeline.save_logs,
     )
 
     try:
@@ -64,7 +49,7 @@ def main(
         logger.exception("Fetch failed")
         sys.exit(1)
 
-    new_posts_df = filter_recent_posts(df, hours=hours)
+    new_posts_df = filter_recent_posts(df, hours=settings.pipeline.hours)
     logger.info("%d new posts found", len(new_posts_df))
     raw_path = settings.paths.raw_output_dir / f"{run_date.isoformat()}.json"
     enriched_path = settings.paths.enriched_output_dir / f"{run_date.isoformat()}.json"
@@ -74,7 +59,7 @@ def main(
     sorted_df = new_posts_df.sort_values("created_at", ascending=False)
     new_posts = [post_to_dict(row) for _, row in sorted_df.iterrows()]
 
-    if save_raw:
+    if settings.pipeline.save_raw:
         save_output(
             new_posts,
             total_archive=len(df),
@@ -92,7 +77,7 @@ def main(
                 "Enrichment complete: %d categorized posts",
                 len(enrichment.post_categories),
             )
-            if save_enriched:
+            if settings.pipeline.save_enriched:
                 save_output(
                     new_posts,
                     total_archive=len(df),
@@ -113,46 +98,5 @@ def main(
     notifier(t0, new_posts, enrichment)
 
 
-def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """Parse CLI arguments for one-off pipeline overrides."""
-    parser = argparse.ArgumentParser(
-        description="Run the Truth Social feed pipeline.",
-    )
-    parser.add_argument(
-        "--hours", type=int, default=None,
-        help="Override look-back window (hours)",
-    )
-    parser.add_argument(
-        "--log-level", type=str, default=None,
-        help="Override log level (DEBUG, INFO, WARNING, ERROR)",
-    )
-    parser.add_argument(
-        "--save-raw", action="store_true", default=False,
-        help="Write raw JSON to data/raw/",
-    )
-    parser.add_argument(
-        "--save-enriched", action="store_true", default=False,
-        help="Write enriched JSON to data/enriched/",
-    )
-    parser.add_argument(
-        "--save-logs", action="store_true", default=False,
-        help="Write log file to data/logs/",
-    )
-    return parser.parse_args(argv)
-
-
-def cli(argv: list[str] | None = None) -> None:
-    """Entry point for the ``ttsfeed`` console script and ``__main__``."""
-    args = _parse_args(argv)
-
-    main(
-        hours=args.hours,
-        log_level=args.log_level,
-        save_raw=args.save_raw or None,
-        save_enriched=args.save_enriched or None,
-        save_logs=args.save_logs or None,
-    )
-
-
 if __name__ == "__main__":
-    cli()
+    main()
