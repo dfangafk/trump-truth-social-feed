@@ -32,7 +32,7 @@ dependencies = [
 Repository = "https://github.com/dfangafk/trump-truth-social-feed"
 
 [project.scripts]
-ttsfeed = "ttsfeed.pipeline:cli"
+ttsfeed = "ttsfeed.pipeline:main"
 
 [dependency-groups]
 dev = [

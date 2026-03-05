@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from ttsfeed.config import settings
-from ttsfeed.pipeline import _parse_args, main
+from ttsfeed.pipeline import main
 
 
 def test_main_no_llm_saves_once(mocker):
@@ -128,21 +128,3 @@ def test_main_exits_on_fetch_failure(mocker):
     assert exc_info.value.code == 1
 
 
-def test_parse_args_defaults():
-    """Default args: all None/False."""
-    args = _parse_args([])
-    assert args.hours is None
-    assert args.log_level is None
-    assert args.save_raw is False
-    assert args.save_enriched is False
-    assert args.save_logs is False
-
-
-def test_parse_args_overrides():
-    """CLI flags set the expected values."""
-    args = _parse_args(["--hours", "48", "--log-level", "DEBUG", "--save-raw", "--save-enriched", "--save-logs"])
-    assert args.hours == 48
-    assert args.log_level == "DEBUG"
-    assert args.save_raw is True
-    assert args.save_enriched is True
-    assert args.save_logs is True
