@@ -1,29 +1,20 @@
 # trump-truth-social-feed
 
-[![Daily Truth Social Enrich](https://github.com/dfangafk/trump-truth-social-feed/actions/workflows/daily_ingest.yml/badge.svg)](https://github.com/dfangafk/trump-truth-social-feed/actions/workflows/daily_ingest.yml)
+[![Daily Truth Social Feed](https://github.com/dfangafk/trump-truth-social-feed/actions/workflows/daily_ingest.yml/badge.svg)](https://github.com/dfangafk/trump-truth-social-feed/actions/workflows/daily_ingest.yml)
 
-Daily LLM-enriched feed of Trump's Truth Social posts — automatically categorized and summarized.
+Daily LLM-enriched feed of Trump's Truth Social posts — automatically categorized, summarized, and emailed.
 
 ---
 
 ## What Is This?
 
-Each day this pipeline pulls Trump's latest Truth Social posts, classifies each one across a fixed 9-category taxonomy, and generates a prose daily summary — all via LLM. Results are committed directly to this repo so you can consume them without running any code.
+Each day this pipeline pulls Trump's latest Truth Social posts, classifies each one into exactly one of 10 fixed categories, and generates a prose daily summary — all via LLM.
 
-Built on top of [stiles/trump-truth-social-archive](https://github.com/stiles/trump-truth-social-archive), which provides the raw Parquet/JSON archive maintained by CNN data journalist [@stiles](https://github.com/stiles). This repo adds the daily filtering and LLM enrichment layer.
-
-Two output tiers are written each run:
-
-| Path | Contents |
-|------|----------|
-| `data/enriched/YYYY-MM-DD.json` | Posts from the last 24 hours with per-post `categories` and a prose `daily_summary` — **primary data product** |
-| `data/raw/YYYY-MM-DD.json` | Same posts, no LLM enrichment — written even when LLM is unavailable |
+Built on top of [stiles/trump-truth-social-archive](https://github.com/stiles/trump-truth-social-archive), this repo adds the daily filtering, LLM enrichment, and email notification layer.
 
 ---
 
-## Data Files
-
-### Enriched output — `data/enriched/YYYY-MM-DD.json`
+## Data Output
 
 ```json
 {
@@ -44,15 +35,12 @@ Two output tiers are written each run:
       "replies_count": 144,
       "reblogs_count": 375,
       "favourites_count": 1147,
-      "categories": ["economy / trade", "legal / courts", "personal attacks"]
+      "categories": ["Tariffs & Trade"],
+      "is_reblog": false
     }
   ]
 }
 ```
-
-### Raw output — `data/raw/YYYY-MM-DD.json`
-
-Same structure as enriched, but `summary` omits `daily_summary` and each post has no `categories` field.
 
 ---
 
@@ -60,56 +48,90 @@ Same structure as enriched, but `summary` omits `daily_summary` and each post ha
 
 ### Category taxonomy
 
-Each post is assigned one or more of these 9 fixed categories:
+Each post is assigned exactly one of these 10 categories:
 
-- `immigration`
-- `election integrity`
-- `media criticism`
-- `economy / trade`
-- `foreign policy`
-- `legal / courts`
-- `endorsements`
-- `personal attacks`
-- `MAGA / rallies`
+- `Elections & Campaigns`
+- `Tariffs & Trade`
+- `Economy, Jobs & Inflation`
+- `Taxes & Regulation`
+- `Border & Immigration`
+- `Crime & Public Safety`
+- `Courts & Legal Proceedings`
+- `Foreign Affairs & Defense`
+- `Media & Public Narrative`
+- `Other`
 
 ### Daily summary
 
 The `summary.daily_summary` field is a 2-3 sentence prose overview synthesizing the major themes across all posts for that day.
 
-### Environment variables
-
-```bash
-# .env.example
-LLM_PROVIDER=auto          # auto | api | claude_code_cli | codex_cli
-LLM_MODEL=                 # LiteLLM model string, e.g. openai/gpt-4o or claude-3-5-sonnet-20241022
-
-ANTHROPIC_API_KEY=
-OPENAI_API_KEY=
-GEMINI_API_KEY=
-```
-
-Enrichment is **optional** — if no provider is available or the LLM call fails, the pipeline still writes raw output and exits cleanly.
-
 ---
 
-## Data Source & Dependency Risk
+## Configuration
 
-The upstream archive is hosted at [stiles/trump-truth-social-archive](https://github.com/stiles/trump-truth-social-archive) — a dataset of all public Trump Truth Social posts.
+Two files control the pipeline:
 
-**Risk**: For now, this pipeline is entirely dependent on the data source. If the upstream repo is deleted, privatized, or restructured, ingestion will fail.
+**`settings.toml`** — version-controlled behavior settings (provider, model, prompt, schedule, output flags, SMTP config):
+
+```toml
+[pipeline]
+hours = 24
+log_level = "INFO"
+save_raw = false
+save_enriched = false
+save_logs = false
+
+[fetch]
+archive_url = "https://ix.cnn.io/data/truth-social/truth_archive.json"
+timeout = 120
+
+[notify]
+timezone = "America/New_York"
+smtp_host = "smtp.gmail.com"
+smtp_port = 465
+subject_template = "Trump Truth Social Feed — {date} ({count} new posts)"
+
+[llm]
+provider = "auto"    # auto | api | claude_code_cli | codex_cli
+models = [
+  "gemini/gemini-3-flash-preview",
+  "gemini/gemini-2.5-flash",
+]
+
+[llm.api_kwargs]
+num_retries = 3
+```
+
+**`.env`** — secrets only, never committed:
+
+```bash
+# API keys (required for LLM_PROVIDER=api or auto→api)
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+
+# Email notifications (leave blank to disable)
+SENDER_GMAIL=           # must be a Gmail address
+GMAIL_APP_PASSWORD=     # 16-char App Password from Google Account settings
+RECEIVER_EMAIL=         # recipient address (any provider)
+```
 
 ---
 
 ## How It Works
 
 ```
-1. Download Parquet archive from upstream CNN URL
-        ↓ (fallback to JSON if Parquet fails)
+1. Download JSON archive from upstream CNN URL
+        |
 2. Parse to DataFrame, filter posts from last 24 hours
-        ↓
-3. Write raw JSON → data/raw/YYYY-MM-DD.json
-        ↓
-4. Call LLM for categories + summary → write enriched JSON → data/enriched/YYYY-MM-DD.json
+        |
+3. Write raw JSON  ->  data/raw/YYYY-MM-DD.json        [always]
+        |
+4. Call LLM for categories + summary (if provider available)
+        |
+5. Write enriched JSON  ->  data/enriched/YYYY-MM-DD.json  [if enrichment succeeded]
+        |
+6. Send email digest via Gmail SMTP                    [if SMTP credentials set]
 ```
 
 ---
@@ -122,7 +144,7 @@ The upstream archive is hosted at [stiles/trump-truth-social-archive](https://gi
 git clone https://github.com/dfangafk/trump-truth-social-feed.git
 cd trump-truth-social-feed
 uv sync
-cp .env.example .env   # add LLM credentials
+cp .env.example .env   # add API keys and/or email credentials
 uv run python -m ttsfeed.pipeline
 ```
 
@@ -149,26 +171,20 @@ dependencies = [
 ]
 ```
 
+The `main()` entry point in `pipeline.py` accepts an optional `notify_fn` callback so downstream repos can substitute their own notification logic (e.g. Resend-based dispatch) without modifying this package.
+
 ---
 
 ## GitHub Actions
 
-The workflow (`.github/workflows/daily_ingest.yml`) runs daily at **23:30 UTC** and can also be triggered manually via `workflow_dispatch`.
+The workflow (`.github/workflows/daily_ingest.yml`) runs daily at **12:00 UTC** (7 AM ET) and can also be triggered manually via `workflow_dispatch`.
 
 On each run it:
 1. Installs dependencies with `uv`
 2. Runs `ttsfeed.pipeline`
-3. Commits any new files in `data/raw/` and `data/enriched/` as `github-actions[bot]`
+3. Commits any new files in `data/raw/`, `data/enriched/`, and `data/logs/` as `github-actions[bot]`
 
-LLM credentials are stored as GitHub Actions secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`) and repository variables (`LLM_PROVIDER`, `LLM_MODEL`).
-
----
-
-## Limitations
-
-**Cron job delay** — GitHub Actions scheduled workflows can be delayed during high-load periods (especially at the top of the hour). If load is high enough, queued jobs may be dropped entirely.
-
-**Gmail sender only** — The email dispatch module supports Gmail as the sending account, authenticated via an [App Password](https://myaccount.google.com/apppasswords) (requires 2-Step Verification). Other SMTP providers are not currently supported.
+Secrets stored in the repository: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `SENDER_GMAIL`, `GMAIL_APP_PASSWORD`, `RECEIVER_EMAIL`.
 
 ---
 
@@ -177,18 +193,40 @@ LLM credentials are stored as GitHub Actions secrets (`ANTHROPIC_API_KEY`, `OPEN
 ```
 trump-truth-social-feed/
 ├── ttsfeed/
-│   ├── config.py      # Constants, paths, category taxonomy
-│   ├── fetch.py       # Download archive, parse to DataFrame
-│   ├── analyze.py     # LLM prompt construction and response parsing
-│   ├── llm.py         # LLM provider abstraction (API / CLI)
-│   ├── export.py      # Write raw and enriched JSON output files
-│   └── pipeline.py    # CLI entry point combining all steps
-├── tests/             # pytest tests (all external calls mocked)
+│   ├── config.py        # Settings loader (settings.toml + .env), path constants
+│   ├── fetch.py         # Download archive, parse to DataFrame, filter recent posts
+│   ├── analyze.py       # LLM prompt construction, response parsing, EnrichResult
+│   ├── llm.py           # LLM provider abstraction (API / Claude CLI / Codex CLI)
+│   ├── export.py        # Serialize posts, write raw and enriched JSON output files
+│   ├── notify.py        # Gmail SMTP email digest after enrichment
+│   ├── pipeline.py      # Orchestrator: fetch -> enrich -> export -> notify -> log
+│   └── templates/
+│       ├── digest.html.jinja2
+│       └── digest.txt.jinja2
+├── tests/               # pytest tests (all external calls mocked)
 ├── data/
-│   ├── raw/           # YYYY-MM-DD.json (no enrichment)
-│   └── enriched/      # YYYY-MM-DD.json (with categories + summary)
+│   ├── raw/             # YYYY-MM-DD.json (no enrichment)
+│   ├── enriched/        # YYYY-MM-DD.json (with categories + summary)
+│   └── logs/            # YYYY-MM-DD.json (run metadata)
+├── settings.toml        # Behavior config (version-controlled)
 ├── .env.example
 └── .github/
     └── workflows/
         └── daily_ingest.yml
 ```
+
+---
+
+## Data Source & Dependency Risk
+
+The upstream archive is hosted at [stiles/trump-truth-social-archive](https://github.com/stiles/trump-truth-social-archive) — a dataset of all public Trump Truth Social posts.
+
+**Risk**: This pipeline is entirely dependent on the upstream data source. If the upstream repo is deleted, privatized, or restructured, ingestion will fail.
+
+---
+
+## Limitations
+
+**Cron job delay** — GitHub Actions scheduled workflows can be delayed during high-load periods. If load is high enough, queued jobs may be dropped entirely.
+
+**Gmail sender only** — The email digest uses Gmail SMTP (port 465, SSL) authenticated via an [App Password](https://myaccount.google.com/apppasswords) (requires 2-Step Verification). Other SMTP providers are not currently supported.
