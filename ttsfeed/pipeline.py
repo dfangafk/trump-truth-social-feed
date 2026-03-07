@@ -5,7 +5,6 @@ import logging
 import sys
 
 import pandas as pd
-from pydantic import ValidationError
 
 from ttsfeed.analyze import analyze_posts
 from ttsfeed.config import settings
@@ -30,8 +29,10 @@ def _add_file_handler(run_date: datetime.date) -> None:
 
 
 def main(notify_fn: NotifyFn | None = None) -> None:
+    # --- Setup ---
     t0 = pd.Timestamp.now("UTC")
     run_date = t0.date()
+    logger.info("Run date: %s", run_date)
     if settings.pipeline.save_logs:
         _add_file_handler(run_date)
     logger.info("Pipeline start")
@@ -42,6 +43,7 @@ def main(notify_fn: NotifyFn | None = None) -> None:
         settings.pipeline.save_logs,
     )
 
+    # --- Fetch & filter ---
     try:
         raw = download_archive()
         df = bytes_to_dataframe(raw)
@@ -52,15 +54,13 @@ def main(notify_fn: NotifyFn | None = None) -> None:
 
     new_posts_df = filter_recent_posts(df, hours=settings.pipeline.hours)
     logger.info("%d new posts found", len(new_posts_df))
-    raw_path = settings.paths.raw_output_dir / f"{run_date.isoformat()}.json"
-    enriched_path = settings.paths.enriched_output_dir / f"{run_date.isoformat()}.json"
-    logger.info("Run date: %s", run_date)
 
     # Build sorted post list once for all consumers
     sorted_df = new_posts_df.sort_values("created_at", ascending=False)
     new_posts = [post_to_dict(row) for _, row in sorted_df.iterrows()]
 
     if settings.pipeline.save_raw:
+        raw_path = settings.paths.raw_output_dir / f"{run_date.isoformat()}.json"
         save_output(
             new_posts,
             total_archive=len(df),
@@ -68,40 +68,45 @@ def main(notify_fn: NotifyFn | None = None) -> None:
             output_path=raw_path,
         )
 
+    # --- LLM enrichment (optional) ---
+    # enrichment stays None if disabled, no provider found, or enrichment fails.
     enrichment = None
 
-    complete = build_complete_fn()
-    if complete is not None:
-        try:
-            enrichment = analyze_posts(new_posts, complete)
-            logger.info(
-                "Enrichment complete: %d categorized posts",
-                len(enrichment.post_categories),
-            )
-            if settings.pipeline.save_enriched:
-                save_output(
-                    new_posts,
-                    total_archive=len(df),
-                    reference_time=t0,
-                    enrichment=enrichment,
-                    output_path=enriched_path,
+    if settings.pipeline.enable_llm:
+        complete = build_complete_fn()
+        if complete is not None:
+            try:
+                enrichment = analyze_posts(new_posts, complete)
+                logger.info(
+                    "Enrichment complete: %d categorized posts",
+                    len(enrichment.post_categories),
                 )
-
-        except Exception:
-            logger.warning("LLM enrichment failed; skipping", exc_info=True)
+                if settings.pipeline.save_enriched:
+                    enriched_path = settings.paths.enriched_output_dir / f"{run_date.isoformat()}.json"
+                    save_output(
+                        new_posts,
+                        total_archive=len(df),
+                        reference_time=t0,
+                        enrichment=enrichment,
+                        output_path=enriched_path,
+                    )
+            except Exception:
+                logger.warning("LLM enrichment failed; skipping", exc_info=True)
+        else:
+            logger.info("No LLM provider available; skipping enrichment")
     else:
-        logger.info("No LLM provider available; skipping enrichment")
+        logger.info("LLM enrichment disabled (PIPELINE__ENABLE_LLM=false)")
+
+    # --- Email notification (optional) ---
+    if settings.pipeline.enable_notify:
+        notifier = notify_fn if notify_fn is not None else send_notification
+        notifier(t0, new_posts, enrichment)
+    else:
+        logger.info("Email notification disabled (PIPELINE__ENABLE_NOTIFY=false)")
 
     elapsed = (pd.Timestamp.now("UTC") - t0).total_seconds()
     logger.info("Pipeline complete in %.1f seconds", elapsed)
 
-    notifier = notify_fn if notify_fn is not None else send_notification
-    notifier(t0, new_posts, enrichment)
-
 
 if __name__ == "__main__":
-    try:
-        main()
-    except (ValidationError, RuntimeError) as exc:
-        logger.error("Configuration error: %s", exc)
-        sys.exit(1)
+    main()
