@@ -54,6 +54,8 @@ class PipelineSettings(BaseModel):
     save_raw: bool = False       # write data/raw/YYYY-MM-DD.json
     save_enriched: bool = False  # write data/enriched/YYYY-MM-DD.json
     save_logs: bool = False      # write data/logs/YYYY-MM-DD.log
+    enable_llm: bool = True      # set to false to skip LLM enrichment entirely
+    enable_notify: bool = True   # set to false to skip email notification entirely
 
 
 class PromptSettings(BaseModel):
