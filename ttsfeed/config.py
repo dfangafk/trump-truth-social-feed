@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 # --- Directory paths ---
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # repo root
-DATA_DIR = BASE_DIR / "data"
 
 # --- URL constants ---
 
