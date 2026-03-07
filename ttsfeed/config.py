@@ -1,16 +1,15 @@
 """Configuration constants and settings loader for the Truth Social data pipeline."""
 
 import logging
-import sys
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
-    TomlConfigSettingsSource
+    TomlConfigSettingsSource,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,8 +65,31 @@ class PipelineSettings(BaseModel):
 class PromptSettings(BaseModel):
     """LLM prompt and category configuration."""
 
-    template: str
-    categories: str
+    template: str = """
+    You are analyzing Trump's Truth Social posts for a daily briefing.
+
+    Substantive posts ({n} total):
+    {numbered_posts}
+
+    Assign each post exactly one category from this list. Use "Other" if no specific category fits:
+    {categories}
+
+    Respond with valid JSON only, no markdown:
+    {{"summary": "<2-3 sentence daily overview>", "posts": [{{"id": "<post id>", "categories": ["<category names>"]}}]}}
+    """
+
+    categories: str = """
+    - Elections & Campaigns: Elections, voting, polling, endorsements, rallies, and campaign competition.
+    - Tariffs & Trade: Tariffs, trade deficits/surpluses, trade deals, and import/export policy.
+    - Economy, Jobs & Inflation: Economic growth, labor market conditions, wages, inflation, and business activity.
+    - Taxes & Regulation: Tax policy, regulatory burden, deregulation, permits, and compliance.
+    - Border & Immigration: Border enforcement, migration, asylum, deportation, and entry policy.
+    - Crime & Public Safety: Crime trends, policing, drugs/fentanyl, gangs, and local public safety.
+    - Courts & Legal Proceedings: Courts, judges, trials, indictments, rulings, constitutional and legal claims.
+    - Foreign Affairs & Defense: International conflicts, geopolitics, military posture, alliances, and national security.
+    - Media & Public Narrative: Media coverage, press criticism, narrative framing, speech and culture debates.
+    - Other: Fallback when no topical category is a clear fit.
+    """
 
 
 class PathSettings(BaseModel):
@@ -92,7 +114,7 @@ class Settings(BaseSettings):
     notify: NotifySettings = NotifySettings()
     pipeline: PipelineSettings = PipelineSettings()
     llm: LLMSettings = LLMSettings()
-    prompt: PromptSettings
+    prompt: PromptSettings = PromptSettings()
     paths: PathSettings = PathSettings()
 
     # Secrets from .env
@@ -112,18 +134,13 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        return (init_settings, env_settings, dotenv_settings, TomlConfigSettingsSource(settings_cls), file_secret_settings)
+        sources: list[PydanticBaseSettingsSource] = [init_settings, env_settings, dotenv_settings, file_secret_settings]
+        if (BASE_DIR / "settings.toml").exists():
+            sources.insert(3, TomlConfigSettingsSource(settings_cls))
+        return tuple(sources)
 
 
-try:
-    settings = Settings()
-except (ValidationError, FileNotFoundError, Exception) as exc:
-    logger.error(
-        "Failed to load settings — check settings.toml and .env at %s: %s",
-        BASE_DIR,
-        exc,
-    )
-    sys.exit(1)
+settings = Settings()
 
 if settings.sender_gmail and not settings.sender_gmail.endswith("@gmail.com"):
     logger.warning(

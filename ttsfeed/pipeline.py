@@ -5,6 +5,7 @@ import logging
 import sys
 
 import pandas as pd
+from pydantic import ValidationError
 
 from ttsfeed.analyze import analyze_posts
 from ttsfeed.config import settings
@@ -99,4 +100,8 @@ def main(notify_fn: NotifyFn | None = None) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (ValidationError, RuntimeError) as exc:
+        logger.error("Configuration error: %s", exc)
+        sys.exit(1)
