@@ -9,8 +9,7 @@ A daily pipeline that downloads Trump's Truth Social archive from CNN, filters p
 ```
 trump-truth-social-feed/
 ├── pyproject.toml          # Dependencies, entry point, build config
-├── settings.toml           # User-editable behavior settings (version-controlled)
-├── .env                    # Secrets only — never committed (API keys, email creds)
+├── .env                    # Secrets and behavior overrides — never committed
 ├── ttsfeed/                # Main package
 │   ├── __init__.py
 │   ├── analyze.py          # LLM enrichment → EnrichResult (summary + per-post categories)
@@ -124,26 +123,22 @@ _write_run_summary()        ← [always] write run log to data/logs/YYYY-MM-DD.j
 
 ## Module Details
 
-### `config.py` — Settings Dataclasses, TOML Loader & Constants
+### `config.py` — Settings Dataclasses & Constants
 
-Settings live in `config.py` (no separate `settings.py` module). `load_settings()` reads
-`settings.toml` at the repo root using `tomllib` (stdlib, Python 3.11+) and is called once
-at module import time; the result is exposed as the module-level `settings` singleton.
+Settings live in `config.py` (no separate `settings.py` module). All configuration is loaded
+from environment variables and an optional `.env` file at startup; the result is exposed as the
+module-level `settings` singleton. Nested settings use double-underscore notation
+(e.g. `PIPELINE__HOURS=48`, `LLM__PROVIDER=api`). `.env` is resolved relative to the process's
+working directory so it works correctly both in standalone use and when imported as a library.
 
 | Dataclass         | Fields                                                         |
 |-------------------|----------------------------------------------------------------|
 | `FetchSettings`   | `archive_url` (CNN archive URL), `timeout` (HTTP timeout, default 120s), `user_agent` |
 | `NotifySettings`  | `timezone` (default `America/New_York`), `smtp_host` (default `smtp.gmail.com`), `smtp_port` (default 465), `subject_template` (Python `.format()` template with `{date}` and `{count}` placeholders) |
-| `LLMSettings`     | `provider`, `models`, `api_kwargs: dict[str, Any]` — open passthrough dict forwarded directly to `litellm.completion()`; any litellm kwarg accepted; defaults to `{"num_retries": 3}` |
-| `PipelineSettings`| `hours`, `log_level`, `schedule` (informational), `save_raw` (bool, default `False`), `save_enriched` (bool, default `False`), `save_logs` (bool, default `False`) — the three save flags can be disabled via `settings.toml` or env vars (`PIPELINE__SAVE_RAW=false`, etc.) |
-| `PromptSettings`  | `template`, `categories` — both have hardcoded defaults so the pipeline works without `settings.toml` |
+| `LLMSettings`     | `provider`, `models`, `api_kwargs: dict[str, Any]` — open passthrough dict forwarded directly to `litellm.completion()`; any litellm kwarg accepted |
+| `PipelineSettings`| `hours`, `log_level`, `schedule` (informational), `save_raw` (bool, default `False`), `save_enriched` (bool, default `False`), `save_logs` (bool, default `False`) — override via env vars (`PIPELINE__SAVE_RAW=false`, etc.) |
+| `PromptSettings`  | `template`, `categories` — both have hardcoded defaults; override via `PROMPT__TEMPLATE` / `PROMPT__CATEGORIES` env vars |
 | `Settings`        | `fetch`, `notify`, `pipeline`, `llm`, `prompt`, `paths`       |
-
-**`settings.toml`** — ships with the repo as the reference config. Contains all tunable
-behavior (`[fetch]`, `[notify]`, `[pipeline]`, `[llm]`, `[llm.api_kwargs]`, `[prompt]`). Secrets (API keys, SMTP
-credentials) stay in `.env` and are never committed. Categories and the prompt template are
-defined under `[prompt]` in the TOML file, with hardcoded fallback defaults in `PromptSettings`
-for installs that do not include the TOML file.
 
 **Constants exported by `config.py`:**
 
@@ -226,7 +221,7 @@ Subject: `Trump Truth Social — YYYY-MM-DD (N new posts)`. Body includes date, 
 uv run python -m ttsfeed.pipeline   # run for today (enrichment if API model, claude CLI, or codex CLI available)
 ```
 
-All pipeline settings (`hours`, `save_raw`, `save_enriched`, `save_logs`, `log_level`) are read from `settings.toml`. The `ttsfeed` console script entry point invokes `main()` directly.
+All pipeline settings (`hours`, `save_raw`, `save_enriched`, `save_logs`, `log_level`) are read from environment variables (e.g. `PIPELINE__HOURS=48`) with safe defaults. The `ttsfeed` console script entry point invokes `main()` directly.
 
 `main(notify_fn: NotifyFn | None = None)` accepts an optional `notify_fn` callback matching `NotifyFn` from `ttsfeed.notify`. When provided, it is called instead of the built-in `send_notification`. Pass `None` (the default) to retain the standard Gmail SMTP behavior. This allows downstream repos to substitute their own notification logic (e.g. Resend-based dispatch) without modifying this package.
 
@@ -311,7 +306,7 @@ pytest
 |--------------------|-------------------------------------------------------------------|
 | `test_notify.py`   | `send_notification`: SMTP call verified, correct subject/body, early-return when env vars missing |
 | `test_analyze.py`  | `analyze_posts`: success path, empty posts, malformed JSON, missing keys, propagated exceptions; `_is_reblog`/`_has_content` helpers; pre-filter exclusion of reblogs/empty posts from LLM; all-non-substantive skips LLM |
-| `test_config.py`   | `load_settings()`: defaults, TOML overrides (pipeline/llm/prompt), env var overrides, invalid JSON ignored, corrupt TOML falls back to defaults |
+| `test_config.py`   | `Settings`: defaults, env var overrides (pipeline/llm/prompt), nested delimiter support |
 | `test_export.py`   | `_post_to_dict` (basic fields, list media, JSON-string media, NaN counts, None media), `save_output` (JSON structure, zero-post output, per-post enrichment categories) |
 | `test_fetch.py`    | Download (success + failure), parsing (JSON), ID normalization, sorting, `filter_recent_posts` (recent/none/all/custom window, defaults to now) |
 | `test_llm.py`      | `build_complete_fn`: explicit `LLM_PROVIDER` selection (`api`/`claude_code_cli`/`codex_cli`/`auto`), invalid provider handling, availability checks, and None fallback; `_call_llm_api`: success + propagated provider errors; `_call_claude_cli`: success path, non-zero exit code, missing structured_output key; `_call_codex_cli`: success + non-zero exit |

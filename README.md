@@ -69,40 +69,9 @@ The `summary.daily_summary` field is a 2-3 sentence prose overview synthesizing 
 
 ## Configuration
 
-Two files control the pipeline:
+All configuration is via environment variables or a `.env` file (never committed).
 
-**`settings.toml`** — version-controlled behavior settings (provider, model, prompt, schedule, output flags, SMTP config):
-
-```toml
-[pipeline]
-hours = 24
-log_level = "INFO"
-save_raw = false
-save_enriched = false
-save_logs = false
-
-[fetch]
-archive_url = "https://ix.cnn.io/data/truth-social/truth_archive.json"
-timeout = 120
-
-[notify]
-timezone = "America/New_York"
-smtp_host = "smtp.gmail.com"
-smtp_port = 465
-subject_template = "Trump Truth Social Feed — {date} ({count} new posts)"
-
-[llm]
-provider = "auto"    # auto | api | claude_code_cli | codex_cli
-models = [
-  "gemini/gemini-3-flash-preview",
-  "gemini/gemini-2.5-flash",
-]
-
-[llm.api_kwargs]
-num_retries = 3
-```
-
-**`.env`** — secrets only, never committed:
+**`.env`** — secrets and optional behavior overrides:
 
 ```bash
 # API keys (required for LLM_PROVIDER=api or auto→api)
@@ -114,7 +83,17 @@ GEMINI_API_KEY=
 SENDER_GMAIL=           # must be a Gmail address
 GMAIL_APP_PASSWORD=     # 16-char App Password from Google Account settings
 RECEIVER_EMAIL=         # recipient address (any provider)
+
+# Behavior settings — optional, all have defaults
+# Use SECTION__KEY notation (double underscore = nested delimiter)
+# PIPELINE__HOURS=24
+# PIPELINE__LOG_LEVEL=INFO
+# LLM__PROVIDER=auto       # auto | api | claude_code_cli | codex_cli
+# LLM__MODELS=["gemini/gemini-2.5-flash"]
+# FETCH__TIMEOUT=120
 ```
+
+All settings have safe defaults and the pipeline runs without any `.env` file (LLM enrichment and email are skipped if their credentials are absent).
 
 ---
 
@@ -208,7 +187,6 @@ trump-truth-social-feed/
 │   ├── raw/             # YYYY-MM-DD.json (no enrichment)
 │   ├── enriched/        # YYYY-MM-DD.json (with categories + summary)
 │   └── logs/            # YYYY-MM-DD.json (run metadata)
-├── settings.toml        # Behavior config (version-controlled)
 ├── .env.example
 └── .github/
     └── workflows/

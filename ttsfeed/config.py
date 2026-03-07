@@ -5,12 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
-from pydantic_settings import (
-    BaseSettings,
-    PydanticBaseSettingsSource,
-    SettingsConfigDict,
-    TomlConfigSettingsSource,
-)
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +42,8 @@ class LLMSettings(BaseModel):
     """LLM provider and model configuration."""
 
     provider: str = "auto"
-    models: list[str] = []
-    api_kwargs: dict[str, Any] = {}
+    models: list[str] = ["gemini/gemini-3-flash-preview", "gemini/gemini-2.5-flash"]
+    api_kwargs: dict[str, Any] = {"num_retries": 3}
 
 
 class PipelineSettings(BaseModel):
@@ -102,11 +97,11 @@ class PathSettings(BaseModel):
 
 
 class Settings(BaseSettings):
-    """All tunable settings for ttsfeed, loaded from settings.toml and .env."""
+    """All tunable settings for ttsfeed, loaded from environment variables and .env."""
 
     model_config = SettingsConfigDict(
-        toml_file=BASE_DIR / "settings.toml",
-        env_file=BASE_DIR / ".env",
+        env_file=".env",
+        env_nested_delimiter="__",
         extra="ignore",
     )
 
@@ -124,20 +119,6 @@ class Settings(BaseSettings):
     sender_gmail: str = ""
     gmail_app_password: str = ""
     receiver_email: str = ""
-
-    @classmethod
-    def settings_customise_sources(
-        cls,
-        settings_cls: type[BaseSettings],
-        init_settings: PydanticBaseSettingsSource,
-        env_settings: PydanticBaseSettingsSource,
-        dotenv_settings: PydanticBaseSettingsSource,
-        file_secret_settings: PydanticBaseSettingsSource,
-    ) -> tuple[PydanticBaseSettingsSource, ...]:
-        sources: list[PydanticBaseSettingsSource] = [init_settings, env_settings, dotenv_settings, file_secret_settings]
-        if (BASE_DIR / "settings.toml").exists():
-            sources.insert(3, TomlConfigSettingsSource(settings_cls))
-        return tuple(sources)
 
 
 settings = Settings()
