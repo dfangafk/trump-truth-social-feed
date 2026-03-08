@@ -16,7 +16,7 @@ Visit **[truth-feed.com](https://www.truth-feed.com/)** to subscribe and receive
 
 ## What You'll Receive
 
-![Email digest preview](docs/digest-preview.png)
+<p align="center"><img src="docs/digest-preview.png" alt="Email digest preview" width="500"></p>
 
 ---
 
@@ -53,13 +53,15 @@ cp .env.example .env
 
 All configuration is via environment variables or a `.env` file (never committed). Copy `.env.example` and fill in what you need:
 
-- **LLM enrichment** (optional): set an API key for any [LiteLLM-supported provider](https://docs.litellm.ai/docs/providers).
-  Common keys: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`.
-  The default models are `gemini/gemini-3-flash-preview` and `gemini/gemini-2.5-flash` (via LiteLLM). Override with `LLM__MODELS`. The model prefix determines which API key is needed — e.g., `gemini/` models require `GEMINI_API_KEY`.
-  To skip enrichment: `PIPELINE__ENABLE_LLM=false`.
+**LLM enrichment** (optional):
+- Set an API key for any [LiteLLM-supported provider](https://docs.litellm.ai/docs/providers). Common keys: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`
+- Default models: `gemini/gemini-3-flash-preview` and `gemini/gemini-2.5-flash` (via LiteLLM). Override with `LLM__MODELS`
+- The model prefix determines which API key is needed — e.g., `gemini/` models require `GEMINI_API_KEY`
+- To skip enrichment: `PIPELINE__ENABLE_LLM=false`
 
-- **Email** (optional): set `SENDER_GMAIL`, `GMAIL_APP_PASSWORD`, and `RECEIVER_EMAIL`.
-  To skip email: `PIPELINE__ENABLE_NOTIFY=false`.
+**Email** (optional):
+- Set `SENDER_GMAIL`, `GMAIL_APP_PASSWORD`, and `RECEIVER_EMAIL`
+- To skip email: `PIPELINE__ENABLE_NOTIFY=false`
 
 Refer to `.env.example` for available settings and `ttsfeed/config.py` for their defaults.
 
