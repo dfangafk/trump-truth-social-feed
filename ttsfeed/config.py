@@ -50,7 +50,7 @@ class PipelineSettings(BaseModel):
 
     hours: int = 24
     log_level: str = "INFO"
-    schedule: str = "0 23 * * *"
+    schedule: str = "0 12 * * *"
     save_raw: bool = True        # write data/raw/YYYY-MM-DD.json
     save_enriched: bool = True   # write data/enriched/YYYY-MM-DD.json
     save_logs: bool = True       # write data/logs/YYYY-MM-DD.log
