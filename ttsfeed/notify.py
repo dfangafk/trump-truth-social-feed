@@ -97,7 +97,11 @@ def build_template_context(
                 else []
             ),
             "created_at_et": _to_et_display(post.get("created_at", "")),
-            "media_items": [{"url": u, "type": _media_type(u)} for u in post.get("media", [])],
+            "media_items": [
+                {"url": u, "type": _media_type(u)}
+                for u in post.get("media", [])
+                if u.startswith(("https://", "http://"))
+            ],
         }
         for post in sorted_posts
     ]

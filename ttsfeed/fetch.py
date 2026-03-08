@@ -16,7 +16,7 @@ def download_archive() -> bytes:
     url = settings.fetch.archive_url
     headers = {"User-Agent": settings.fetch.user_agent}
     logger.info("Downloading archive from %s", url)
-    resp = requests.get(url, timeout=settings.fetch.timeout, headers=headers)
+    resp = requests.get(url, timeout=settings.fetch.timeout, headers=headers, allow_redirects=False)
     resp.raise_for_status()
     logger.info("Downloaded %.2f MB", len(resp.content) / 1_000_000)
     return resp.content
