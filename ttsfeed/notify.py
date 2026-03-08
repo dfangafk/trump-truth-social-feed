@@ -74,7 +74,9 @@ def send_notification(
         with smtplib.SMTP_SSL(settings.notify.smtp_host, settings.notify.smtp_port, context=context) as server:
             server.login(settings.sender_gmail, settings.gmail_app_password)
             server.send_message(msg)
-        logger.info("Notification email sent to %s", settings.receiver_email)
+        _email = settings.receiver_email
+        _masked = _email[:2] + "***" + _email[_email.index("@"):]
+        logger.info("Notification email sent to %s", _masked)
     except Exception:
         logger.warning("Failed to send notification email", exc_info=True)
 
