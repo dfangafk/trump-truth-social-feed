@@ -4,6 +4,8 @@
 
 ## About
 
+If you read Trump's posts for any reason, and are tired of manually checking Truth Social. This tool is for you - no account, no ads, no endless scrolling.
+
 Self-hosted pipeline that fetches Trump's Truth Social posts, enriches them with an LLM (categorization, summarization), and emails yourself a daily digest. Runs once daily via GitHub Actions.
 
 Posts are sourced from a third-party archive (not the Truth Social directly).
